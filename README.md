@@ -10,6 +10,7 @@ go get github.com/Mellanox/sriovnet.git
 
 Example:
 
+```
 package main
 
 import (
@@ -20,3 +21,4 @@ import (
 func main() {
 
 }
+```
