@@ -13,12 +13,12 @@ const (
 	netdevUnbindFile = "unbind"
 	netdevBindFile   = "bind"
 
-	netDevMaxVFCountFile     = "sriov_totalvfs"
-	netDevCurrentVFCountFile = "sriov_numvfs"
-	netDevVFDevicePrefix     = "virtfn"
+	netDevMaxVfCountFile     = "sriov_totalvfs"
+	netDevCurrentVfCountFile = "sriov_numvfs"
+	netDevVfDevicePrefix     = "virtfn"
 )
 
-type VFObject struct {
+type VfObject struct {
 	NetdevName string
 	PCIDevName string
 }
@@ -28,11 +28,11 @@ func netDevDeviceDir(netDevName string) string {
 	return devDirName
 }
 
-func getMaxVFCount(pfNetdevName string) (int, error) {
+func getMaxVfCount(pfNetdevName string) (int, error) {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevMaxVFCountFile,
+		Path: devDirName + "/" + netDevMaxVfCountFile,
 	}
 
 	maxVfs, err := maxDevFile.ReadInt()
@@ -44,21 +44,21 @@ func getMaxVFCount(pfNetdevName string) (int, error) {
 	}
 }
 
-func setMaxVFCount(pfNetdevName string, maxVFs int) error {
+func setMaxVfCount(pfNetdevName string, maxVfs int) error {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevCurrentVFCountFile,
+		Path: devDirName + "/" + netDevCurrentVfCountFile,
 	}
 
-	return maxDevFile.WriteInt(maxVFs)
+	return maxDevFile.WriteInt(maxVfs)
 }
 
-func netdevGetEnabledVFCount(pfNetdevName string) (int, error) {
+func netdevGetEnabledVfCount(pfNetdevName string) (int, error) {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevCurrentVFCountFile,
+		Path: devDirName + "/" + netDevCurrentVfCountFile,
 	}
 
 	curVfs, err := maxDevFile.ReadInt()
@@ -100,7 +100,7 @@ func getVfPciDevList(pfNetdevName string) ([]string, error) {
 	var i int
 	devDirName := netDevDeviceDir(pfNetdevName)
 
-	virtFnDirs, err := lsFilesWithPrefix(devDirName, netDevVFDevicePrefix, true)
+	virtFnDirs, err := lsFilesWithPrefix(devDirName, netDevVfDevicePrefix, true)
 
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func getVfPciDevList(pfNetdevName string) ([]string, error) {
 	return vfDirList, nil
 }
 
-func findVFDirForNetdev(pfNetdevName string, vfNetdevName string) (string, error) {
+func findVfDirForNetdev(pfNetdevName string, vfNetdevName string) (string, error) {
 
 	virtFnDirs, err := getVfPciDevList(pfNetdevName)
 	if err != nil {

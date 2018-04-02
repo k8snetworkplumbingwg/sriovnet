@@ -5,23 +5,23 @@ import (
 	"testing"
 )
 
-func TestEnableSRIOV(t *testing.T) {
+func TestEnableSriov(t *testing.T) {
 
-	err := EnableSRIOV("ib0")
+	err := EnableSriov("ib0")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestDisableSRIOV(t *testing.T) {
-	err := DisableSRIOV("ib0")
+func TestDisableSriov(t *testing.T) {
+	err := DisableSriov("ib0")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGetPfHandle(t *testing.T) {
-	err1 := EnableSRIOV("ib0")
+	err1 := EnableSriov("ib0")
 	if err1 != nil {
 		t.Fatal(err1)
 	}
@@ -35,8 +35,8 @@ func TestGetPfHandle(t *testing.T) {
 	}
 }
 
-func TestConfigVFs(t *testing.T) {
-	err1 := EnableSRIOV("ib0")
+func TestConfigVfs(t *testing.T) {
+	err1 := EnableSriov("ib0")
 	if err1 != nil {
 		t.Fatal(err1)
 	}
@@ -45,7 +45,7 @@ func TestConfigVFs(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVFs(handle)
+	err3 := ConfigVfs(handle)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
@@ -54,10 +54,10 @@ func TestConfigVFs(t *testing.T) {
 	}
 }
 
-func TestAllocFreeVF(t *testing.T) {
+func TestAllocFreeVf(t *testing.T) {
 	var vfList[10] *VfObj
 
-	err1 := EnableSRIOV("ib0")
+	err1 := EnableSriov("ib0")
 	if err1 != nil {
 		t.Fatal(err1)
 	}
@@ -66,12 +66,12 @@ func TestAllocFreeVF(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVFs(handle)
+	err3 := ConfigVfs(handle)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
 	for i := 0; i < 10; i++ {
-		vfList[i], _ = AllocateVF(handle)
+		vfList[i], _ = AllocateVf(handle)
 	}
 	for _, vf := range handle.List {
 		fmt.Printf("after allocation vf = %v\n", vf)
@@ -80,7 +80,7 @@ func TestAllocFreeVF(t *testing.T) {
 		if vfList[i] == nil {
 			continue
 		}
-		FreeVF(handle, vfList[i])
+		FreeVf(handle, vfList[i])
 	}
 	for _, vf := range handle.List {
 		fmt.Printf("after free vf = %v\n", vf)

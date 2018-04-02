@@ -33,9 +33,9 @@ func SetPFLinkUp(pfNetdevName string) error {
 	return netlink.LinkSetUp(handle)
 }
 
-func IsSRIOVSupported(netdevName string) bool {
+func IsSriovSupported(netdevName string) bool {
 
-	maxvfs, err := getMaxVFCount(netdevName)
+	maxvfs, err := getMaxVfCount(netdevName)
 	if maxvfs == 0 || err != nil {
 		return false
 	} else {
@@ -43,8 +43,8 @@ func IsSRIOVSupported(netdevName string) bool {
 	}
 }
 
-func EnableSRIOV(pfNetdevName string) error {
-	var maxVFCount int
+func EnableSriov(pfNetdevName string) error {
+	var maxVfCount int
 	var err error
 
 	devDirName := netDevDeviceDir(pfNetdevName)
@@ -54,20 +54,20 @@ func EnableSRIOV(pfNetdevName string) error {
 		return fmt.Errorf("device %s not found", pfNetdevName)
 	}
 
-	maxVFCount, err = getMaxVFCount(pfNetdevName)
+	maxVfCount, err = getMaxVfCount(pfNetdevName)
 	if err != nil {
 		fmt.Println("Fail to read max vf count of PF %v", pfNetdevName)
 		return err
 	}
 
-	if maxVFCount != 0 {
-		return setMaxVFCount(pfNetdevName, maxVFCount)
+	if maxVfCount != 0 {
+		return setMaxVfCount(pfNetdevName, maxVfCount)
 	} else {
 		return fmt.Errorf("sriov unsupported for device: ", pfNetdevName)
 	}
 }
 
-func DisableSRIOV(pfNetdevName string) error {
+func DisableSriov(pfNetdevName string) error {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	devExist := dirExists(devDirName)
@@ -75,7 +75,7 @@ func DisableSRIOV(pfNetdevName string) error {
 		return fmt.Errorf("device %s not found", pfNetdevName)
 	}
 
-	return setMaxVFCount(pfNetdevName, 0)
+	return setMaxVfCount(pfNetdevName, 0)
 }
 
 func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
@@ -115,7 +115,7 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 	return &handle, nil
 }
 
-func UnbindVF(handle *PfNetdevHandle, vf *VfObj) error {
+func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	cmdFile := filepath.Join(netSysDir, handle.PfNetdevName, netdevDriverDir, netdevUnbindFile)
 	cmdFileObj := fileObject{
 		Path: cmdFile,
@@ -130,7 +130,7 @@ func UnbindVF(handle *PfNetdevHandle, vf *VfObj) error {
 	return err
 }
 
-func BindVF(handle *PfNetdevHandle, vf *VfObj) error {
+func BindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	cmdFile := filepath.Join(netSysDir, handle.PfNetdevName, netdevDriverDir, netdevBindFile)
 	cmdFileObj := fileObject{
 		Path: cmdFile,
@@ -145,7 +145,7 @@ func BindVF(handle *PfNetdevHandle, vf *VfObj) error {
 	return err
 }
 
-func GetVFDefaultMacAddr(vfNetdevName string) (string, error) {
+func GetVfDefaultMacAddr(vfNetdevName string) (string, error) {
 
 	ethHandle, err1 := netlink.LinkByName(vfNetdevName)
 	if err1 != nil {
@@ -156,7 +156,7 @@ func GetVFDefaultMacAddr(vfNetdevName string) (string, error) {
 	return ethAttr.HardwareAddr.String(), nil
 }
 
-func SetVFDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
+func SetVfDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
 	ethHandle, err1 := netlink.LinkByName(vf.NetdevName)
 	if err1 != nil {
 		return err1
@@ -165,11 +165,11 @@ func SetVFDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
 	return netlink.LinkSetVfHardwareAddr(handle.pfLinkHandle, vf.Index, ethAttr.HardwareAddr)
 }
 
-func SetVFVlan(handle *PfNetdevHandle, vf *VfObj, vlan int) error {
+func SetVfVlan(handle *PfNetdevHandle, vf *VfObj, vlan int) error {
 	return netlink.LinkSetVfVlan(handle.pfLinkHandle, vf.Index, vlan)
 }
 
-func SetVFDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
+func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 
 	uuid, err := uuid.NewV4()
 	if err != nil {
@@ -188,7 +188,7 @@ func SetVFDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 	return nil
 }
 
-func SetVFPrivileged(handle *PfNetdevHandle, vf *VfObj, privileged bool) error {
+func SetVfPrivileged(handle *PfNetdevHandle, vf *VfObj, privileged bool) error {
 
 	var spoofChk bool
 	var trusted bool
@@ -219,14 +219,14 @@ func setDefaultHwAddr(handle *PfNetdevHandle, vf *VfObj) error {
 
 	ethAttr := handle.pfLinkHandle.Attrs()
 	if ethAttr.EncapType == "ether" {
-		err = SetVFDefaultMacAddress(handle, vf)
+		err = SetVfDefaultMacAddress(handle, vf)
 	} else if ethAttr.EncapType == "infiniband" {
-		err = SetVFDefaultGUID(handle, vf)
+		err = SetVfDefaultGUID(handle, vf)
 	}
 	return err
 }
 
-func ConfigVFs(handle *PfNetdevHandle) error {
+func ConfigVfs(handle *PfNetdevHandle) error {
 	var err error
 
 	for _, vf := range handle.List {
@@ -235,15 +235,15 @@ func ConfigVFs(handle *PfNetdevHandle) error {
 		if err != nil {
 			break
 		}
-		//By default VF is not trusted
-		_ = SetVFPrivileged(handle, vf, false)
+		//By default Vf is not trusted
+		_ = SetVfPrivileged(handle, vf, false)
 		if vf.Bound {
-			err = UnbindVF(handle, vf)
+			err = UnbindVf(handle, vf)
 			if err != nil {
 				fmt.Printf("Fail to unbind err=%v\n", err)
 				break
 			}
-			err = BindVF(handle, vf)
+			err = BindVf(handle, vf)
 			if err != nil {
 				fmt.Printf("Fail to bind err=%v\n", err)
 				break
@@ -253,7 +253,7 @@ func ConfigVFs(handle *PfNetdevHandle) error {
 	return nil
 }
 
-func AllocateVF(handle *PfNetdevHandle) (*VfObj, error) {
+func AllocateVf(handle *PfNetdevHandle) (*VfObj, error) {
 	for _, vf := range handle.List {
 		if vf.Allocated == true {
 			continue
@@ -262,10 +262,10 @@ func AllocateVF(handle *PfNetdevHandle) (*VfObj, error) {
 		fmt.Printf("Allocated vf = %v\n", *vf)
 		return vf, nil
 	}
-	return nil, fmt.Errorf("All VFs for %v are allocated.", handle.PfNetdevName)
+	return nil, fmt.Errorf("All Vfs for %v are allocated.", handle.PfNetdevName)
 }
 
-func FreeVF(handle *PfNetdevHandle, vf *VfObj) {
+func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 	vf.Allocated = false
 	fmt.Printf("Free vf = %v\n", *vf)
 }
