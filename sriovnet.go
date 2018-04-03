@@ -265,6 +265,22 @@ func AllocateVf(handle *PfNetdevHandle) (*VfObj, error) {
 	return nil, fmt.Errorf("All Vfs for %v are allocated.", handle.PfNetdevName)
 }
 
+func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj, error) {
+	for _, vf := range handle.List {
+		if vf.Allocated == true {
+			continue
+		}
+		macAddr, _ := GetVfDefaultMacAddr(vf.NetdevName)
+		if macAddr != vfMacAddress {
+			continue
+		}
+		vf.Allocated = true
+		fmt.Printf("Allocated vf by mac = %v\n", *vf)
+		return vf, nil
+	}
+	return nil, fmt.Errorf("All Vfs for %v are allocated.", handle.PfNetdevName)
+}
+
 func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 	vf.Allocated = false
 	fmt.Printf("Free vf = %v\n", *vf)

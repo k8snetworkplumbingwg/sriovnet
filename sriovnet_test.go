@@ -118,5 +118,51 @@ func TestFreeByName(t *testing.T) {
 	for _, vf := range handle.List {
 		fmt.Printf("after free vf = %v\n", vf)
 	}
-	t.Fatal(err3)
+}
+
+func TestAllocateVfByMac(t *testing.T) {
+	var vfList [10]*VfObj
+	var vfName [10]string
+
+	err1 := EnableSriov("ens2f1")
+	if err1 != nil {
+		t.Fatal(err1)
+	}
+
+	handle, err2 := GetPfNetdevHandle("ens2f1")
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+	err3 := ConfigVfs(handle)
+	if err3 != nil {
+		t.Fatal(err3)
+	}
+	for i := 0; i < 10; i++ {
+		vfList[i], _ = AllocateVf(handle)
+		if vfList[i] != nil {
+			vfName[i] = vfList[i].NetdevName
+		}
+	}
+	for _, vf := range handle.List {
+		fmt.Printf("after allocation vf = %v\n", vf)
+	}
+	for i := 0; i < 10; i++ {
+		if vfList[i] == nil {
+			continue
+		}
+		FreeVf(handle, vfList[i])
+	}
+	for _, vf := range handle.List {
+		fmt.Printf("after alloc vf = %v\n", vf)
+	}
+	for i := 0; i < 2; i++ {
+		if vfName[i] == "" {
+			continue
+		}
+		mac, _ := GetVfDefaultMacAddr(vfName[i])
+		vfList[i], _ = AllocateVfByMacAddress(handle, mac)
+	}
+	for _, vf := range handle.List {
+		fmt.Printf("after alloc vf = %v\n", vf)
+	}
 }
