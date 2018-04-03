@@ -55,7 +55,7 @@ func TestConfigVfs(t *testing.T) {
 }
 
 func TestAllocFreeVf(t *testing.T) {
-	var vfList[10] *VfObj
+	var vfList [10]*VfObj
 
 	err1 := EnableSriov("ib0")
 	if err1 != nil {
@@ -85,4 +85,38 @@ func TestAllocFreeVf(t *testing.T) {
 	for _, vf := range handle.List {
 		fmt.Printf("after free vf = %v\n", vf)
 	}
+}
+
+func TestFreeByName(t *testing.T) {
+	var vfList [10]*VfObj
+
+	err1 := EnableSriov("ib0")
+	if err1 != nil {
+		t.Fatal(err1)
+	}
+
+	handle, err2 := GetPfNetdevHandle("ib0")
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+	err3 := ConfigVfs(handle)
+	if err3 != nil {
+		t.Fatal(err3)
+	}
+	for i := 0; i < 10; i++ {
+		vfList[i], _ = AllocateVf(handle)
+	}
+	for _, vf := range handle.List {
+		fmt.Printf("after allocation vf = %v\n", vf)
+	}
+	for i := 0; i < 10; i++ {
+		if vfList[i] == nil {
+			continue
+		}
+		FreeVfByNetdevName(handle, vfList[i].NetdevName)
+	}
+	for _, vf := range handle.List {
+		fmt.Printf("after free vf = %v\n", vf)
+	}
+	t.Fatal(err3)
 }

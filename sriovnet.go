@@ -270,3 +270,12 @@ func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 	fmt.Printf("Free vf = %v\n", *vf)
 }
 
+func FreeVfByNetdevName(handle *PfNetdevHandle, vfNetdevName string) error {
+	for _, vf := range handle.List {
+		if vf.Allocated == true && vf.NetdevName == vfNetdevName {
+			vf.Allocated = true
+			return nil
+		}
+	}
+	return fmt.Errorf("vf netdev %v not found", vfNetdevName)
+}
