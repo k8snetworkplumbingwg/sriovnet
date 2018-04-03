@@ -8,7 +8,7 @@ import (
 
 const (
 	netSysDir        = "/sys/class/net"
-	netDevPrefix     = "device"
+	pcidevPrefix     = "device"
 	netdevDriverDir  = "device/driver"
 	netdevUnbindFile = "unbind"
 	netdevBindFile   = "bind"
@@ -24,7 +24,7 @@ type VfObject struct {
 }
 
 func netDevDeviceDir(netDevName string) string {
-	devDirName := netSysDir + "/" + netDevName + "/" + netDevPrefix
+	devDirName := netSysDir + "/" + netDevName + "/" + pcidevPrefix
 	return devDirName
 }
 
@@ -83,7 +83,7 @@ func vfNetdevNameFromParent(pfNetdevName string, vfDir string) string {
 }
 
 func vfPCIDevNameFromVfDir(pfNetdevName string, vfDir string) string {
-	link := filepath.Join(netSysDir, pfNetdevName, netDevPrefix, vfDir)
+	link := filepath.Join(netSysDir, pfNetdevName, pcidevPrefix, vfDir)
 	pciDevDir, err := os.Readlink(link)
 	if err != nil {
 		return ""
@@ -126,7 +126,7 @@ func findVfDirForNetdev(pfNetdevName string, vfNetdevName string) (string, error
 	for _, vfDir := range virtFnDirs {
 
 		vfNetdevPath := filepath.Join(netSysDir, pfNetdevName,
-			netDevPrefix, vfDir, "net")
+			pcidevPrefix, vfDir, "net")
 		vfNetdevList, err := lsDirs(vfNetdevPath)
 		if err != nil {
 			return "", err

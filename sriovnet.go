@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"net"
 )
 
 type VfObj struct {
@@ -169,6 +170,32 @@ func SetVfVlan(handle *PfNetdevHandle, vf *VfObj, vlan int) error {
 	return netlink.LinkSetVfVlan(handle.pfLinkHandle, vf.Index, vlan)
 }
 
+func setVfNodeGuid(handle *PfNetdevHandle, vf *VfObj, guid []byte) error {
+	var err error
+
+	nodeGuidHwAddr := net.HardwareAddr(guid)
+
+	err = ibSetNodeGuid(handle.PfNetdevName, vf.Index, nodeGuidHwAddr)
+	if err == nil {
+		return nil
+	}
+	err = netlink.LinkSetVfNodeGUID(handle.pfLinkHandle, vf.Index, guid)
+	return err
+}
+
+func setVfPortGuid(handle *PfNetdevHandle, vf *VfObj, guid []byte) error {
+	var err error
+
+	portGuidHwAddr := net.HardwareAddr(guid)
+
+	err = ibSetPortGuid(handle.PfNetdevName, vf.Index, portGuidHwAddr)
+	if err == nil {
+		return nil
+	}
+	err = netlink.LinkSetVfPortGUID(handle.pfLinkHandle, vf.Index, guid)
+	return err
+}
+
 func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 
 	uuid, err := uuid.NewV4()
@@ -177,15 +204,14 @@ func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 	}
 	nodeGuid := uuid[0:8]
 	portGuid := uuid[8:16]
-	err = netlink.LinkSetVfNodeGUID(handle.pfLinkHandle, vf.Index, nodeGuid)
+
+	err = setVfNodeGuid(handle, vf, nodeGuid)
 	if err != nil {
 		return err
 	}
-	err = netlink.LinkSetVfPortGUID(handle.pfLinkHandle, vf.Index, portGuid)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	err = setVfPortGuid(handle, vf, portGuid)
+	return err
 }
 
 func SetVfPrivileged(handle *PfNetdevHandle, vf *VfObj, privileged bool) error {
@@ -226,11 +252,35 @@ func setDefaultHwAddr(handle *PfNetdevHandle, vf *VfObj) error {
 	return err
 }
 
+func setPortAdminState(handle *PfNetdevHandle, vf *VfObj) error {
+	ethAttr := handle.pfLinkHandle.Attrs()
+	if ethAttr.EncapType == "infiniband" {
+		state, err2 := ibGetPortAdminState(handle.PfNetdevName, vf.Index)
+		// Ignore the error where this file is not available
+		if err2 != nil {
+			return nil
+		}
+		fmt.Printf("Admin state = %v", state)
+		err2 = ibSetPortAdminState(handle.PfNetdevName, vf.Index, ibSriovPortAdminStateFollow)
+		if err2 != nil {
+			//If file exist, we must be able to write
+			fmt.Printf("Admin state setting error = %v", err2)
+			return err2
+		}
+	}
+	return nil
+}
+
 func ConfigVfs(handle *PfNetdevHandle) error {
 	var err error
 
 	for _, vf := range handle.List {
 		fmt.Printf("vf = %v\n", vf)
+		err = setPortAdminState(handle, vf)
+		if err != nil {
+			break
+		}
+
 		err = setDefaultHwAddr(handle, vf)
 		if err != nil {
 			break
