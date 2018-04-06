@@ -202,15 +202,14 @@ func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 	if err != nil {
 		return err
 	}
-	nodeGuid := uuid[0:8]
-	portGuid := uuid[8:16]
+	guid := uuid[0:8]
 
-	err = setVfNodeGuid(handle, vf, nodeGuid)
+	err = setVfNodeGuid(handle, vf, guid)
 	if err != nil {
 		return err
 	}
 
-	err = setVfPortGuid(handle, vf, portGuid)
+	err = setVfPortGuid(handle, vf, guid)
 	return err
 }
 
