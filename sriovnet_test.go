@@ -1,7 +1,6 @@
 package sriovnet
 
 import (
-	"fmt"
 	"testing"
 )
 
