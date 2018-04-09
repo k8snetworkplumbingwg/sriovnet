@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/vishvananda/netlink"
+	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"net"
 )
 
 type VfObj struct {
@@ -211,6 +211,7 @@ func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 		return err
 	}
 	guid := uuid[0:8]
+	guid[7] = byte(vf.Index)
 
 	err = setVfNodeGuid(handle, vf, guid)
 	if err != nil {

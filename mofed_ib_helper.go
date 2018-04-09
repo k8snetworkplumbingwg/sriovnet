@@ -1,9 +1,9 @@
 package sriovnet
 
 import (
+	"net"
 	"path/filepath"
 	"strconv"
-	"net"
 )
 
 const (
