@@ -44,7 +44,7 @@ func TestConfigVfs(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVfs(handle)
+	err3 := ConfigVfs(handle, false)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
@@ -65,7 +65,7 @@ func TestAllocFreeVf(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVfs(handle)
+	err3 := ConfigVfs(handle, false)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
@@ -98,7 +98,7 @@ func TestFreeByName(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVfs(handle)
+	err3 := ConfigVfs(handle, false)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
@@ -132,7 +132,7 @@ func TestAllocateVfByMac(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	err3 := ConfigVfs(handle)
+	err3 := ConfigVfs(handle, true)
 	if err3 != nil {
 		t.Fatal(err3)
 	}

@@ -279,7 +279,7 @@ func setPortAdminState(handle *PfNetdevHandle, vf *VfObj) error {
 	return nil
 }
 
-func ConfigVfs(handle *PfNetdevHandle) error {
+func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 	var err error
 
 	for _, vf := range handle.List {
@@ -293,8 +293,7 @@ func ConfigVfs(handle *PfNetdevHandle) error {
 		if err != nil {
 			break
 		}
-		//By default Vf is not trusted
-		_ = SetVfPrivileged(handle, vf, false)
+		_ = SetVfPrivileged(handle, vf, privileged)
 		if vf.Bound {
 			err = UnbindVf(handle, vf)
 			if err != nil {
