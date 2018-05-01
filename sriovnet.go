@@ -122,6 +122,10 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 	return &handle, nil
 }
 
+func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
+	return vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+}
+
 func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	cmdFile := filepath.Join(netSysDir, handle.PfNetdevName, netdevDriverDir, netdevUnbindFile)
 	cmdFileObj := fileObject{
@@ -341,7 +345,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 		return vf, nil
 	}
 	return nil, fmt.Errorf("All Vfs for %v are allocated for mac address %v.",
-				handle.PfNetdevName, vfMacAddress)
+		handle.PfNetdevName, vfMacAddress)
 }
 
 func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
