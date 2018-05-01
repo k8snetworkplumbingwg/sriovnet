@@ -13,7 +13,6 @@ import (
 type VfObj struct {
 	Index      int
 	PcidevName string
-	NetdevName string
 	Bound      bool
 	Allocated  bool
 }
@@ -113,7 +112,6 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 			PcidevName: vfDir,
 		}
 		if vfNetdevName != "" {
-			vfObj.NetdevName = vfNetdevName
 			vfObj.Bound = true
 		} else {
 			vfObj.Bound = false
@@ -134,7 +132,6 @@ func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	err := cmdFileObj.Write(pciDevName)
 	if err != nil {
 		vf.Bound = false
-		vf.NetdevName = ""
 	}
 	return err
 }
@@ -149,7 +146,6 @@ func BindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	err := cmdFileObj.Write(pciDevName)
 	if err != nil {
 		vf.Bound = true
-		vf.NetdevName = vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
 	}
 	return err
 }
@@ -166,7 +162,9 @@ func GetVfDefaultMacAddr(vfNetdevName string) (string, error) {
 }
 
 func SetVfDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
-	ethHandle, err1 := netlink.LinkByName(vf.NetdevName)
+
+	netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+	ethHandle, err1 := netlink.LinkByName(netdevName)
 	if err1 != nil {
 		return err1
 	}
@@ -332,7 +330,9 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 		if vf.Allocated == true {
 			continue
 		}
-		macAddr, _ := GetVfDefaultMacAddr(vf.NetdevName)
+
+		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+		macAddr, _ := GetVfDefaultMacAddr(netdevName)
 		if macAddr != vfMacAddress {
 			continue
 		}
@@ -340,7 +340,8 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 		fmt.Printf("Allocated vf by mac = %v\n", *vf)
 		return vf, nil
 	}
-	return nil, fmt.Errorf("All Vfs for %v are allocated.", handle.PfNetdevName)
+	return nil, fmt.Errorf("All Vfs for %v are allocated for mac address %v.",
+				handle.PfNetdevName, vfMacAddress)
 }
 
 func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
@@ -350,7 +351,8 @@ func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 
 func FreeVfByNetdevName(handle *PfNetdevHandle, vfNetdevName string) error {
 	for _, vf := range handle.List {
-		if vf.Allocated == true && vf.NetdevName == vfNetdevName {
+		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+		if vf.Allocated == true && netdevName == vfNetdevName {
 			vf.Allocated = true
 			return nil
 		}
