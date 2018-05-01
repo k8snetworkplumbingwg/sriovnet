@@ -294,6 +294,11 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 			break
 		}
 		_ = SetVfPrivileged(handle, vf, privileged)
+	}
+	if err != nil {
+		return err
+	}
+	for _, vf := range handle.List {
 		if vf.Bound {
 			err = UnbindVf(handle, vf)
 			if err != nil {
