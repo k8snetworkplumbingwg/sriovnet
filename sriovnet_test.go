@@ -1,6 +1,7 @@
 package sriovnet
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -164,4 +165,11 @@ func TestAllocateVfByMac(t *testing.T) {
 	for _, vf := range handle.List {
 		fmt.Printf("after alloc vf = %v\n", vf)
 	}
+}
+
+func TestGetVfPciDevList(t *testing.T) {
+
+	list, _ := GetVfPciDevList("ens2f1")
+	fmt.Println("list is: ", list)
+	t.Fatal(nil)
 }

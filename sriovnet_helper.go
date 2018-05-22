@@ -95,7 +95,7 @@ func vfPCIDevNameFromVfDir(pfNetdevName string, vfDir string) string {
 	return pciDevDir[3:len(pciDevDir)]
 }
 
-func getVfPciDevList(pfNetdevName string) ([]string, error) {
+func GetVfPciDevList(pfNetdevName string) ([]string, error) {
 	var vfDirList []string
 	var i int
 	devDirName := netDevDeviceDir(pfNetdevName)
@@ -116,7 +116,7 @@ func getVfPciDevList(pfNetdevName string) ([]string, error) {
 
 func findVfDirForNetdev(pfNetdevName string, vfNetdevName string) (string, error) {
 
-	virtFnDirs, err := getVfPciDevList(pfNetdevName)
+	virtFnDirs, err := GetVfPciDevList(pfNetdevName)
 	if err != nil {
 		return "", err
 	}

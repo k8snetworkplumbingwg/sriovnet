@@ -98,7 +98,7 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 		pfLinkHandle: pfLinkHandle,
 	}
 
-	list, err := getVfPciDevList(pfNetdevName)
+	list, err := GetVfPciDevList(pfNetdevName)
 	if err != nil {
 		return nil, err
 	}
