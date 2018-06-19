@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"log"
 )
 
 const (
@@ -39,7 +40,7 @@ func getMaxVfCount(pfNetdevName string) (int, error) {
 	if err != nil {
 		return 0, err
 	} else {
-		fmt.Println("max_vfs = ", maxVfs)
+		log.Println("max_vfs = ", maxVfs)
 		return maxVfs, nil
 	}
 }
@@ -54,7 +55,7 @@ func setMaxVfCount(pfNetdevName string, maxVfs int) error {
 	return maxDevFile.WriteInt(maxVfs)
 }
 
-func netdevGetEnabledVfCount(pfNetdevName string) (int, error) {
+func getCurrentVfCount(pfNetdevName string) (int, error) {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
@@ -65,7 +66,7 @@ func netdevGetEnabledVfCount(pfNetdevName string) (int, error) {
 	if err != nil {
 		return 0, err
 	} else {
-		fmt.Println("cur_vfs = ", curVfs)
+		log.Println("cur_vfs = ", curVfs)
 		return curVfs, nil
 	}
 }

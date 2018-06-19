@@ -36,12 +36,12 @@ func TestGetPfHandle(t *testing.T) {
 }
 
 func TestConfigVfs(t *testing.T) {
-	err1 := EnableSriov("ib0")
+	err1 := EnableSriov("ens2f0")
 	if err1 != nil {
 		t.Fatal(err1)
 	}
 
-	handle, err2 := GetPfNetdevHandle("ib0")
+	handle, err2 := GetPfNetdevHandle("ens2f0")
 	if err2 != nil {
 		t.Fatal(err2)
 	}
@@ -52,6 +52,12 @@ func TestConfigVfs(t *testing.T) {
 	for _, vf := range handle.List {
 		fmt.Printf("after config vf = %v\n", vf)
 	}
+}
+
+func TestIsSriovEnabled(t *testing.T) {
+	status := IsSriovEnabled("ens2f0")
+
+	fmt.Printf("sriov status = %v", status)
 }
 
 func TestAllocFreeVf(t *testing.T) {

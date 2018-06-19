@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"log"
 )
 
 type VfObj struct {
@@ -43,6 +44,16 @@ func IsSriovSupported(netdevName string) bool {
 	}
 }
 
+func IsSriovEnabled(netdevName string) bool {
+
+	curvfs, err := getCurrentVfCount(netdevName)
+	if curvfs == 0 || err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
 func EnableSriov(pfNetdevName string) error {
 	var maxVfCount int
 	var err error
@@ -56,7 +67,7 @@ func EnableSriov(pfNetdevName string) error {
 
 	maxVfCount, err = getMaxVfCount(pfNetdevName)
 	if err != nil {
-		fmt.Println("Fail to read max vf count of PF %v", pfNetdevName)
+		log.Println("Fail to read max vf count of PF %v", pfNetdevName)
 		return err
 	}
 
@@ -64,9 +75,9 @@ func EnableSriov(pfNetdevName string) error {
 		return fmt.Errorf("sriov unsupported for device: ", pfNetdevName)
 	}
 
-	curVfCount, err2 := netdevGetEnabledVfCount(pfNetdevName)
+	curVfCount, err2 := getCurrentVfCount(pfNetdevName)
 	if err2 != nil {
-		fmt.Println("Fail to read current vf count of PF %v", pfNetdevName)
+		log.Println("Fail to read current vf count of PF %v", pfNetdevName)
 		return err
 	}
 	if curVfCount == 0 {
@@ -270,11 +281,11 @@ func setPortAdminState(handle *PfNetdevHandle, vf *VfObj) error {
 		if err2 != nil {
 			return nil
 		}
-		fmt.Printf("Admin state = %v", state)
+		log.Printf("Admin state = %v", state)
 		err2 = ibSetPortAdminState(handle.PfNetdevName, vf.Index, ibSriovPortAdminStateFollow)
 		if err2 != nil {
 			//If file exist, we must be able to write
-			fmt.Printf("Admin state setting error = %v", err2)
+			log.Printf("Admin state setting error = %v", err2)
 			return err2
 		}
 	}
@@ -285,7 +296,7 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 	var err error
 
 	for _, vf := range handle.List {
-		fmt.Printf("vf = %v\n", vf)
+		log.Printf("vf = %v\n", vf)
 		err = setPortAdminState(handle, vf)
 		if err != nil {
 			break
@@ -304,14 +315,15 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 		if vf.Bound {
 			err = UnbindVf(handle, vf)
 			if err != nil {
-				fmt.Printf("Fail to unbind err=%v\n", err)
+				log.Printf("Fail to unbind err=%v\n", err)
 				break
 			}
 			err = BindVf(handle, vf)
 			if err != nil {
-				fmt.Printf("Fail to bind err=%v\n", err)
+				log.Printf("Fail to bind err=%v\n", err)
 				break
 			}
+			log.Printf("vf = %v unbind/bind completed", vf)
 		}
 	}
 	return nil
@@ -323,7 +335,7 @@ func AllocateVf(handle *PfNetdevHandle) (*VfObj, error) {
 			continue
 		}
 		vf.Allocated = true
-		fmt.Printf("Allocated vf = %v\n", *vf)
+		log.Printf("Allocated vf = %v\n", *vf)
 		return vf, nil
 	}
 	return nil, fmt.Errorf("All Vfs for %v are allocated.", handle.PfNetdevName)
@@ -341,7 +353,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 			continue
 		}
 		vf.Allocated = true
-		fmt.Printf("Allocated vf by mac = %v\n", *vf)
+		log.Printf("Allocated vf by mac = %v\n", *vf)
 		return vf, nil
 	}
 	return nil, fmt.Errorf("All Vfs for %v are allocated for mac address %v.",
@@ -350,7 +362,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 
 func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 	vf.Allocated = false
-	fmt.Printf("Free vf = %v\n", *vf)
+	log.Printf("Free vf = %v\n", *vf)
 }
 
 func FreeVfByNetdevName(handle *PfNetdevHandle, vfNetdevName string) error {
