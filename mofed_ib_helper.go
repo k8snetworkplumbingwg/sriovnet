@@ -15,7 +15,7 @@ const (
 )
 
 func ibGetPortAdminState(pfNetdevName string, vfIndex int) (string, error) {
-	path := filepath.Join(netSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortAdminFile)
+	path := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortAdminFile)
 	adminStateFile := fileObject{
 		Path: path,
 	}
@@ -28,7 +28,7 @@ func ibGetPortAdminState(pfNetdevName string, vfIndex int) (string, error) {
 }
 
 func ibSetPortAdminState(pfNetdevName string, vfIndex int, newState string) error {
-	path := filepath.Join(netSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortAdminFile)
+	path := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortAdminFile)
 	adminStateFile := fileObject{
 		Path: path,
 	}
@@ -37,7 +37,7 @@ func ibSetPortAdminState(pfNetdevName string, vfIndex int, newState string) erro
 }
 
 func ibSetNodeGuid(pfNetdevName string, vfIndex int, guid net.HardwareAddr) error {
-	path := filepath.Join(netSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovNodeFile)
+	path := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovNodeFile)
 	nodeGuidFile := fileObject{
 		Path: path,
 	}
@@ -46,7 +46,7 @@ func ibSetNodeGuid(pfNetdevName string, vfIndex int, guid net.HardwareAddr) erro
 }
 
 func ibSetPortGuid(pfNetdevName string, vfIndex int, guid net.HardwareAddr) error {
-	path := filepath.Join(netSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortFile)
+	path := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, ibSriovCfgDir, strconv.Itoa(vfIndex), ibSriovPortFile)
 	portGuidFile := fileObject{
 		Path: path,
 	}

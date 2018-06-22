@@ -138,7 +138,7 @@ func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
 }
 
 func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
-	cmdFile := filepath.Join(netSysDir, handle.PfNetdevName, netdevDriverDir, netdevUnbindFile)
+	cmdFile := filepath.Join(NetSysDir, handle.PfNetdevName, netdevDriverDir, netdevUnbindFile)
 	cmdFileObj := fileObject{
 		Path: cmdFile,
 	}
@@ -152,7 +152,7 @@ func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
 }
 
 func BindVf(handle *PfNetdevHandle, vf *VfObj) error {
-	cmdFile := filepath.Join(netSysDir, handle.PfNetdevName, netdevDriverDir, netdevBindFile)
+	cmdFile := filepath.Join(NetSysDir, handle.PfNetdevName, netdevDriverDir, netdevBindFile)
 	cmdFileObj := fileObject{
 		Path: cmdFile,
 	}
