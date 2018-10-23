@@ -71,11 +71,11 @@ func getCurrentVfCount(pfNetdevName string) (int, error) {
 	}
 }
 
-func vfNetdevNameFromParent(pfNetdevName string, vfDir string) string {
+func vfNetdevNameFromParent(pfNetdevName string, vfIndex int) string {
 
 	devDirName := netDevDeviceDir(pfNetdevName)
-
-	vfNetdev, _ := lsFilesWithPrefix(devDirName+"/"+vfDir+"/"+"net", "", false)
+	vfNetdev, _ := lsFilesWithPrefix(fmt.Sprintf("%s/%s%v/net", devDirName,
+		netDevVfDevicePrefix, vfIndex), "", false)
 	if len(vfNetdev) <= 0 {
 		return ""
 	} else {
@@ -83,17 +83,16 @@ func vfNetdevNameFromParent(pfNetdevName string, vfDir string) string {
 	}
 }
 
-func vfPCIDevNameFromVfDir(pfNetdevName string, vfDir string) string {
-	link := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, vfDir)
+func vfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
+	link := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, fmt.Sprintf("%s%v",
+		netDevVfDevicePrefix, vfIndex))
 	pciDevDir, err := os.Readlink(link)
-	if err != nil {
-		return ""
-	}
 	if len(pciDevDir) <= 3 {
-		return ""
+		return "", fmt.Errorf("could not find PCI Address for VF %s%v of PF %s",
+			netDevVfDevicePrefix, vfIndex, pfNetdevName)
 	}
 
-	return pciDevDir[3:len(pciDevDir)]
+	return pciDevDir[3:len(pciDevDir)], err
 }
 
 func GetVfPciDevList(pfNetdevName string) ([]string, error) {

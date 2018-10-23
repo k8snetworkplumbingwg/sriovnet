@@ -13,7 +13,7 @@ import (
 
 type VfObj struct {
 	Index      int
-	PcidevName string
+	PciAddress string
 	Bound      bool
 	Allocated  bool
 }
@@ -115,12 +115,18 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 	}
 
 	for _, vfDir := range list {
-		vfIndexStr := strings.TrimPrefix(vfDir, "virtfn")
+		vfIndexStr := strings.TrimPrefix(vfDir, netDevVfDevicePrefix)
 		vfIndex, _ := strconv.Atoi(vfIndexStr)
-		vfNetdevName := vfNetdevNameFromParent(pfNetdevName, vfDir)
+		vfNetdevName := vfNetdevNameFromParent(pfNetdevName, vfIndex)
+		pciAddress, err := vfPCIDevNameFromVfIndex(pfNetdevName, vfIndex)
+		if err != nil {
+			log.Printf("Failed to read PCI Address for VF %v from PF %v: %v\n",
+				vfNetdevName, pfNetdevName, err)
+			continue
+		}
 		vfObj := VfObj{
 			Index:      vfIndex,
-			PcidevName: vfDir,
+			PciAddress: pciAddress,
 		}
 		if vfNetdevName != "" {
 			vfObj.Bound = true
@@ -133,18 +139,12 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 	return &handle, nil
 }
 
-func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
-	return vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
-}
-
 func UnbindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	cmdFile := filepath.Join(NetSysDir, handle.PfNetdevName, netdevDriverDir, netdevUnbindFile)
 	cmdFileObj := fileObject{
 		Path: cmdFile,
 	}
-
-	pciDevName := vfPCIDevNameFromVfDir(handle.PfNetdevName, vf.PcidevName)
-	err := cmdFileObj.Write(pciDevName)
+	err := cmdFileObj.Write(vf.PciAddress)
 	if err != nil {
 		vf.Bound = false
 	}
@@ -156,9 +156,7 @@ func BindVf(handle *PfNetdevHandle, vf *VfObj) error {
 	cmdFileObj := fileObject{
 		Path: cmdFile,
 	}
-
-	pciDevName := vfPCIDevNameFromVfDir(handle.PfNetdevName, vf.PcidevName)
-	err := cmdFileObj.Write(pciDevName)
+	err := cmdFileObj.Write(vf.PciAddress)
 	if err != nil {
 		vf.Bound = true
 	}
@@ -178,7 +176,7 @@ func GetVfDefaultMacAddr(vfNetdevName string) (string, error) {
 
 func SetVfDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
 
-	netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+	netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 	ethHandle, err1 := netlink.LinkByName(netdevName)
 	if err1 != nil {
 		return err1
@@ -301,7 +299,11 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 		if err != nil {
 			break
 		}
-
+		// skip VFs in another namespace
+		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+		if _, err = netlink.LinkByName(netdevName); err != nil{
+			continue
+		}
 		err = setDefaultHwAddr(handle, vf)
 		if err != nil {
 			break
@@ -347,7 +349,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 			continue
 		}
 
-		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 		macAddr, _ := GetVfDefaultMacAddr(netdevName)
 		if macAddr != vfMacAddress {
 			continue
@@ -365,9 +367,10 @@ func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 	log.Printf("Free vf = %v\n", *vf)
 }
 
-func FreeVfByNetdevName(handle *PfNetdevHandle, vfNetdevName string) error {
+func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
+	vfNetdevName := fmt.Sprintf("%s%v", netDevVfDevicePrefix, vfIndex)
 	for _, vf := range handle.List {
-		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.PcidevName)
+		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 		if vf.Allocated == true && netdevName == vfNetdevName {
 			vf.Allocated = true
 			return nil
