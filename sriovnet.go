@@ -67,17 +67,17 @@ func EnableSriov(pfNetdevName string) error {
 
 	maxVfCount, err = getMaxVfCount(pfNetdevName)
 	if err != nil {
-		log.Println("Fail to read max vf count of PF %v", pfNetdevName)
+		log.Println("Fail to read max vf count of PF", pfNetdevName)
 		return err
 	}
 
 	if maxVfCount == 0 {
-		return fmt.Errorf("sriov unsupported for device: ", pfNetdevName)
+		return fmt.Errorf("sriov unsupported for device: %s", pfNetdevName)
 	}
 
 	curVfCount, err2 := getCurrentVfCount(pfNetdevName)
 	if err2 != nil {
-		log.Println("Fail to read current vf count of PF %v", pfNetdevName)
+		log.Println("Fail to read current vf count of PF", pfNetdevName)
 		return err
 	}
 	if curVfCount == 0 {
