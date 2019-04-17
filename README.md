@@ -10,7 +10,7 @@ go get github.com/Mellanox/sriovnet.git
 
 Example:
 
-```
+```go
 package main
 
 import (
