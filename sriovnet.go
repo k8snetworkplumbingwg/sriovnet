@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/vishvananda/netlink"
+	"log"
 	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"log"
 )
 
 type VfObj struct {
@@ -301,7 +301,7 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 		}
 		// skip VFs in another namespace
 		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
-		if _, err = netlink.LinkByName(netdevName); err != nil{
+		if _, err = netlink.LinkByName(netdevName); err != nil {
 			continue
 		}
 		err = setDefaultHwAddr(handle, vf)
@@ -377,4 +377,8 @@ func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
 		}
 	}
 	return fmt.Errorf("vf netdev %v not found", vfNetdevName)
+}
+
+func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
+	return vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 }

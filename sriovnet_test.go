@@ -119,7 +119,7 @@ func TestFreeByName(t *testing.T) {
 		if vfList[i] == nil {
 			continue
 		}
-		FreeVfByNetdevName(handle, vfList[i].NetdevName)
+		FreeVfByNetdevName(handle, vfList[i].Index)
 	}
 	for _, vf := range handle.List {
 		fmt.Printf("after free vf = %v\n", vf)
@@ -130,12 +130,12 @@ func TestAllocateVfByMac(t *testing.T) {
 	var vfList [10]*VfObj
 	var vfName [10]string
 
-	err1 := EnableSriov("ens2f1")
+	err1 := EnableSriov("ens2f0")
 	if err1 != nil {
 		t.Fatal(err1)
 	}
 
-	handle, err2 := GetPfNetdevHandle("ens2f1")
+	handle, err2 := GetPfNetdevHandle("ens2f0")
 	if err2 != nil {
 		t.Fatal(err2)
 	}
@@ -146,7 +146,7 @@ func TestAllocateVfByMac(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		vfList[i], _ = AllocateVf(handle)
 		if vfList[i] != nil {
-			vfName[i] = vfList[i].NetdevName
+			vfName[i] = GetVfNetdevName(handle, vfList[i])
 		}
 	}
 	for _, vf := range handle.List {
@@ -175,7 +175,24 @@ func TestAllocateVfByMac(t *testing.T) {
 
 func TestGetVfPciDevList(t *testing.T) {
 
-	list, _ := GetVfPciDevList("ens2f1")
+	list, _ := GetVfPciDevList("ens2f0")
 	fmt.Println("list is: ", list)
 	t.Fatal(nil)
+}
+
+func TestGetVfNetdevName(t *testing.T) {
+	var vfList [10]*VfObj
+	var vfName [10]string
+
+	handle, err2 := GetPfNetdevHandle("ens2f0")
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+	for i := 0; i < 10; i++ {
+		vfList[i], _ = AllocateVf(handle)
+		if vfList[i] != nil {
+			vfName[i] = GetVfNetdevName(handle, vfList[i])
+			t.Log("Allocated VF: ", vfList[i].Index, "Netdev: ", vfName[i])
+		}
+	}
 }

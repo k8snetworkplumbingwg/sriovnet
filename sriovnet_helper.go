@@ -2,9 +2,9 @@ package sriovnet
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"log"
 )
 
 const (
