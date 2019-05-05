@@ -1,6 +1,7 @@
 package sriovnet
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -51,7 +52,10 @@ func (attrib *fileObject) Read() (str string, err error) {
 			}
 		}()
 	}
-	attrib.File.Seek(0, os.SEEK_SET)
+	_, err = attrib.File.Seek(0, io.SeekStart)
+	if err != nil {
+		return "", err
+	}
 	data, err := ioutil.ReadAll(attrib.File)
 	if err != nil {
 		return "", err
@@ -72,7 +76,10 @@ func (attrib *fileObject) Write(value string) (err error) {
 			}
 		}()
 	}
-	attrib.File.Seek(0, os.SEEK_SET)
+	_, err = attrib.File.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
 	_, err = attrib.File.WriteString(value)
 	return err
 }
@@ -119,25 +126,6 @@ func lsFilesWithPrefix(dir string, filePrefix string, ignoreDir bool) ([]string,
 		}
 	}
 	return desiredFiles, nil
-}
-
-func lsDirs(dir string) ([]string, error) {
-	var dirList []string
-
-	f, err := os.Open(dir)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fileInfos, err := f.Readdir(-1)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range fileInfos {
-		dirList = append(dirList, fileInfos[i].Name())
-	}
-	return dirList, nil
 }
 
 func dirExists(dirname string) bool {
