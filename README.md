@@ -30,7 +30,7 @@ func main() {
 	if err2 != nil {
 		return
 	}
-	err3 := sriovnet.ConfigVfs(handle)
+	err3 := sriovnet.ConfigVfs(handle, false)
 	if err3 != nil {
 		return
 	}
