@@ -25,7 +25,7 @@ type VfObject struct {
 }
 
 func netDevDeviceDir(netDevName string) string {
-	devDirName := NetSysDir + "/" + netDevName + "/" + pcidevPrefix
+	devDirName := filepath.Join(NetSysDir, netDevName, pcidevPrefix)
 	return devDirName
 }
 
@@ -33,7 +33,7 @@ func getMaxVfCount(pfNetdevName string) (int, error) {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevMaxVfCountFile,
+		Path: filepath.Join(devDirName, netDevMaxVfCountFile),
 	}
 
 	maxVfs, err := maxDevFile.ReadInt()
@@ -49,7 +49,7 @@ func setMaxVfCount(pfNetdevName string, maxVfs int) error {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevCurrentVfCountFile,
+		Path: filepath.Join(devDirName, netDevCurrentVfCountFile),
 	}
 
 	return maxDevFile.WriteInt(maxVfs)
@@ -59,7 +59,7 @@ func getCurrentVfCount(pfNetdevName string) (int, error) {
 	devDirName := netDevDeviceDir(pfNetdevName)
 
 	maxDevFile := fileObject{
-		Path: devDirName + "/" + netDevCurrentVfCountFile,
+		Path: filepath.Join(devDirName, netDevCurrentVfCountFile),
 	}
 
 	curVfs, err := maxDevFile.ReadInt()
