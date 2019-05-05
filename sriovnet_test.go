@@ -119,7 +119,10 @@ func TestFreeByName(t *testing.T) {
 		if vfList[i] == nil {
 			continue
 		}
-		FreeVfByNetdevName(handle, vfList[i].Index)
+		err4 := FreeVfByNetdevName(handle, vfList[i].Index)
+		if err4 != nil {
+			t.Fatal(err4)
+		}
 	}
 	for _, vf := range handle.List {
 		fmt.Printf("after free vf = %v\n", vf)

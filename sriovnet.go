@@ -253,9 +253,11 @@ func SetVfPrivileged(handle *PfNetdevHandle, vf *VfObj, privileged bool) error {
 
 	/* do not check for error status as older kernels doesn't
 	 * have support for it.
+	 * golangci-lint complains on missing error check. ignore it
+	 * with nolint comment until we update the code to ignore ENOTSUP error
 	 */
-	netlink.LinkSetVfTrust(handle.pfLinkHandle, vf.Index, trusted)
-	netlink.LinkSetVfSpoofchk(handle.pfLinkHandle, vf.Index, spoofChk)
+	netlink.LinkSetVfTrust(handle.pfLinkHandle, vf.Index, trusted)     //nolint
+	netlink.LinkSetVfSpoofchk(handle.pfLinkHandle, vf.Index, spoofChk) //nolint
 	return nil
 }
 
@@ -333,7 +335,7 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 
 func AllocateVf(handle *PfNetdevHandle) (*VfObj, error) {
 	for _, vf := range handle.List {
-		if vf.Allocated == true {
+		if vf.Allocated {
 			continue
 		}
 		vf.Allocated = true
@@ -345,7 +347,7 @@ func AllocateVf(handle *PfNetdevHandle) (*VfObj, error) {
 
 func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj, error) {
 	for _, vf := range handle.List {
-		if vf.Allocated == true {
+		if vf.Allocated {
 			continue
 		}
 
@@ -371,7 +373,7 @@ func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
 	vfNetdevName := fmt.Sprintf("%s%v", netDevVfDevicePrefix, vfIndex)
 	for _, vf := range handle.List {
 		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
-		if vf.Allocated == true && netdevName == vfNetdevName {
+		if vf.Allocated && netdevName == vfNetdevName {
 			vf.Allocated = true
 			return nil
 		}

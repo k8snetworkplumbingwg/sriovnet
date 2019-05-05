@@ -130,30 +130,3 @@ func GetVfPciDevList(pfNetdevName string) ([]string, error) {
 	}
 	return vfDirList, nil
 }
-
-func findVfDirForNetdev(pfNetdevName string, vfNetdevName string) (string, error) {
-
-	virtFnDirs, err := GetVfPciDevList(pfNetdevName)
-	if err != nil {
-		return "", err
-	}
-
-	ndevSearchName := vfNetdevName + "__"
-
-	for _, vfDir := range virtFnDirs {
-
-		vfNetdevPath := filepath.Join(NetSysDir, pfNetdevName,
-			pcidevPrefix, vfDir, "net")
-		vfNetdevList, err := lsDirs(vfNetdevPath)
-		if err != nil {
-			return "", err
-		}
-		for _, vfName := range vfNetdevList {
-			vfNamePrefixed := vfName + "__"
-			if ndevSearchName == vfNamePrefixed {
-				return vfDir, nil
-			}
-		}
-	}
-	return "", fmt.Errorf("device %s not found", vfNetdevName)
-}
