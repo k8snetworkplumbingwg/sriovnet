@@ -83,16 +83,33 @@ func vfNetdevNameFromParent(pfNetdevName string, vfIndex int) string {
 	}
 }
 
-func vfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
-	link := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, fmt.Sprintf("%s%v",
-		netDevVfDevicePrefix, vfIndex))
-	pciDevDir, err := os.Readlink(link)
+func readPCIsymbolicLink(symbolicLink string) (string, error) {
+	pciDevDir, err := os.Readlink(symbolicLink)
 	if len(pciDevDir) <= 3 {
-		return "", fmt.Errorf("could not find PCI Address for VF %s%v of PF %s",
-			netDevVfDevicePrefix, vfIndex, pfNetdevName)
+		return "", fmt.Errorf("could not find PCI Address")
 	}
 
-	return pciDevDir[3:len(pciDevDir)], err
+	return pciDevDir[3:], err
+}
+func vfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
+	symbolicLink := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, fmt.Sprintf("%s%v",
+		netDevVfDevicePrefix, vfIndex))
+	pciAddress, err := readPCIsymbolicLink(symbolicLink)
+	if err != nil {
+		err = fmt.Errorf("%v for VF %s%v of PF %s", err,
+			netDevVfDevicePrefix, vfIndex, pfNetdevName)
+	}
+	return pciAddress, err
+}
+
+func getPCIFromDeviceName(netdevName string) (string, error) {
+	symbolicLink := filepath.Join(NetSysDir, netdevName, pcidevPrefix)
+	pciAddress, err := readPCIsymbolicLink(symbolicLink)
+	if err != nil {
+		err = fmt.Errorf("%v for netdevice %s", err, netdevName)
+	}
+	return pciAddress, err
+
 }
 
 func GetVfPciDevList(pfNetdevName string) ([]string, error) {
