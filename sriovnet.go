@@ -6,10 +6,14 @@ import (
 	"github.com/vishvananda/netlink"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+var virtFnRe = regexp.MustCompile(`virtfn(\d+)`)
 
 type VfObj struct {
 	Index      int
@@ -381,4 +385,29 @@ func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
 
 func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
 	return vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+}
+
+// GetVfIndexByPciAddress gets a VF PCI address (e.g '0000:03:00.4') and
+// returns the correlate VF index.
+func GetVfIndexByPciAddress(vfPciAddress string) (int, error) {
+	vfPath := filepath.Join(PciSysDir, vfPciAddress, "physfn/virtfn*")
+	matches, err := filepath.Glob(vfPath)
+	if err != nil {
+		return -1, err
+	}
+	for _, match := range matches {
+		tmp, err := os.Readlink(match)
+		if err != nil {
+			continue
+		}
+		if strings.Contains(tmp, vfPciAddress) {
+			result := virtFnRe.FindStringSubmatch(match)
+			vfIndex, err := strconv.Atoi(result[1])
+			if err != nil {
+				continue
+			}
+			return vfIndex, nil
+		}
+	}
+	return -1, fmt.Errorf("vf index for %s not found", vfPciAddress)
 }
