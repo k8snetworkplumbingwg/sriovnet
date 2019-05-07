@@ -43,6 +43,34 @@ func parsePortName(physPortName string) (pfRepIndex int, vfRepIndex int, err err
 	return pfRepIndex, vfRepIndex, err
 }
 
+func isSwitchdev(netdevice string) bool {
+	swIDFile := filepath.Join(NetSysDir, netdevice, netdevPhysSwitchID)
+	physSwitchID, err := ioutil.ReadFile(swIDFile)
+	if err != nil {
+		return false
+	}
+	if physSwitchID != nil && string(physSwitchID) != "" {
+		return true
+	}
+	return false
+}
+
+// GetUplinkRepresentor gets a VF PCI address (e.g '0000:03:00.4') and
+// returns the uplink represntor netdev name for that VF.
+func GetUplinkRepresentor(vfPciAddress string) (string, error) {
+	devicePath := filepath.Join(PciSysDir, vfPciAddress, "physfn/net")
+	devices, err := ioutil.ReadDir(devicePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to lookup %s: %v", vfPciAddress, err)
+	}
+	for _, device := range devices {
+		if isSwitchdev(device.Name()) {
+			return device.Name(), nil
+		}
+	}
+	return "", fmt.Errorf("uplink for %s not found", vfPciAddress)
+}
+
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 	swIDFile := filepath.Join(NetSysDir, uplink, netdevPhysSwitchID)
 	physSwitchID, err := ioutil.ReadFile(swIDFile)

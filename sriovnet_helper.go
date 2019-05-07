@@ -9,6 +9,7 @@ import (
 
 const (
 	NetSysDir        = "/sys/class/net"
+	PciSysDir        = "/sys/bus/pci/devices"
 	pcidevPrefix     = "device"
 	netdevDriverDir  = "device/driver"
 	netdevUnbindFile = "unbind"
