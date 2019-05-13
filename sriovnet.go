@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/vishvananda/netlink"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -412,4 +413,24 @@ func GetVfIndexByPciAddress(vfPciAddress string) (int, error) {
 		}
 	}
 	return -1, fmt.Errorf("vf index for %s not found", vfPciAddress)
+}
+
+// GetNetDevicesFromPci gets a PCI address (e.g '0000:03:00.1') and
+// returns the correlate list of netdevices
+func GetNetDevicesFromPci(pciAddress string) ([]string, error) {
+	var netDevices []string
+	pciDir := filepath.Join(PciSysDir, pciAddress, "net")
+	_, err := os.Lstat(pciDir)
+	if err != nil {
+		return netDevices, fmt.Errorf("cannot get a network device with pci address %v %v", pciAddress, err)
+	}
+
+	netDevicesFiles, err := ioutil.ReadDir(pciDir)
+	if err != nil {
+		return netDevices, fmt.Errorf("failed to get network device name in %v %v", pciDir, err)
+	}
+	for _, netDeviceFile := range netDevicesFiles {
+		netDevices = append(netDevices, strings.TrimSpace(netDeviceFile.Name()))
+    }
+	return netDevices, nil
 }
