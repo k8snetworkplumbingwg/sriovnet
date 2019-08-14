@@ -1,7 +1,7 @@
 package sriovnet
 
 import (
-	"net"
+	"net11"
 	"path/filepath"
 	"strconv"
 )
