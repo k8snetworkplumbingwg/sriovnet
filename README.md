@@ -1,5 +1,5 @@
 # sriovnet
-Go library to configure SRIOV networking devices
+Go library to configure SRIOV networking devices.
 
 Local build and test
 
