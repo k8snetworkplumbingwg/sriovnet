@@ -2,7 +2,7 @@ package sriovnet
 
 import (
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/satori/go.uuid1"
 	"github.com/vishvananda/netlink"
 	"log"
 	"net"
