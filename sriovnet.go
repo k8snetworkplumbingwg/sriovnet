@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/vishvananda/netlink"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
 )
 
 var virtFnRe = regexp.MustCompile(`virtfn(\d+)`)
@@ -420,17 +421,17 @@ func GetVfIndexByPciAddress(vfPciAddress string) (int, error) {
 func GetNetDevicesFromPci(pciAddress string) ([]string, error) {
 	var netDevices []string
 	pciDir := filepath.Join(PciSysDir, pciAddress, "net")
-	_, err := os.Lstat(pciDir)
+	_, err := utilfs.Fs.Stat(pciDir)
 	if err != nil {
 		return netDevices, fmt.Errorf("cannot get a network device with pci address %v %v", pciAddress, err)
 	}
 
-	netDevicesFiles, err := ioutil.ReadDir(pciDir)
+	netDevicesFiles, err := utilfs.Fs.ReadDir(pciDir)
 	if err != nil {
 		return netDevices, fmt.Errorf("failed to get network device name in %v %v", pciDir, err)
 	}
 	for _, netDeviceFile := range netDevicesFiles {
 		netDevices = append(netDevices, strings.TrimSpace(netDeviceFile.Name()))
-    }
+	}
 	return netDevices, nil
 }
