@@ -2,7 +2,7 @@ package sriovnet
 
 import (
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"github.com/vishvananda/netlink"
 	"log"
 	"net"
@@ -223,7 +223,7 @@ func setVfPortGuid(handle *PfNetdevHandle, vf *VfObj, guid []byte) error {
 
 func SetVfDefaultGUID(handle *PfNetdevHandle, vf *VfObj) error {
 
-	uuid, err := uuid.NewV4()
+	uuid, err := uuid.NewRandom()
 	if err != nil {
 		return err
 	}
