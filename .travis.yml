@@ -5,13 +5,7 @@ language: go
 dist: xenial
 
 go:
-  - 1.11.x
-
-
-install:
-  - go get github.com/vishvananda/netlink
-  - go get github.com/satori/go.uuid
-  - go get github.com/spf13/afero
+  - 1.13.x
 
 # Anything in before_script that returns a nonzero exit code will flunk the
 # build and immediately stop. It's sorta like having set -e enabled in bash.
@@ -19,7 +13,6 @@ install:
 before_script:
   - go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
   - go get github.com/mattn/goveralls
-  - go get github.com/stretchr/testify/assert
 
 script:
   - golangci-lint run       # run a bunch of code checkers/linters in parallel
