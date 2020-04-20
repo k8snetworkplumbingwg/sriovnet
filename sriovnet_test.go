@@ -1,13 +1,13 @@
 package sriovnet
 
 import (
-"os"
-"path/filepath"
-"testing"
+	"os"
+	"path/filepath"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
+	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
 )
 
 func setupGetNetDevicesFromPciEnv(t *testing.T, pciAddress string, deviceNames []string) {
@@ -25,7 +25,6 @@ func setupGetNetDevicesFromPciEnv(t *testing.T, pciAddress string, deviceNames [
 			deviceNamePath := filepath.Join(pciNetDir, deviceName)
 			err = utilfs.Fs.MkdirAll(deviceNamePath, os.FileMode(0755))
 		}
-
 	} else {
 		pciNetDir := filepath.Join(PciSysDir, pciAddress)
 		err = utilfs.Fs.MkdirAll(pciNetDir, os.FileMode(0755))

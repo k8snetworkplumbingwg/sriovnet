@@ -43,7 +43,7 @@ func (fs *fakeFs) MkdirAll(path string, perm os.FileMode) error {
 }
 
 // Chtimes via afero.Fs.Chtimes
-func (fs *fakeFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+func (fs *fakeFs) Chtimes(name string, atime, mtime time.Time) error {
 	return fs.a.Fs.Chtimes(name, atime, mtime)
 }
 

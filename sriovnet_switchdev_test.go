@@ -11,22 +11,25 @@ import (
 	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
 )
 
-func setupUplinkRepresentorEnv(t *testing.T, vfPciAddress string) func(){
+//nolint:unparam
+func setupUplinkRepresentorEnv(t *testing.T, vfPciAddress string) func() {
 	var err error
 	utilfs.Fs = utilfs.NewFakeFs()
 	path := filepath.Join(PciSysDir, vfPciAddress, "physfn/net", "eth0")
 	err = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
-	defer func(){if err != nil {
-		t.Errorf("setupUplinkRepresentorEnv, got %v", err)}
+	defer func() {
+		if err != nil {
+			t.Errorf("setupUplinkRepresentorEnv, got %v", err)
+		}
 	}()
 	path = filepath.Join(NetSysDir, "eth0")
 	err = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
 	path = filepath.Join(NetSysDir, "eth1")
 	err = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
 	swIDFile := filepath.Join(NetSysDir, "eth0", netdevPhysSwitchID)
-	swId, err := utilfs.Fs.Create(swIDFile)
-	_, err = swId.Write([]byte("111111"))
-	return func(){utilfs.Fs.RemoveAll("/")} //nolint
+	swID, err := utilfs.Fs.Create(swIDFile)
+	_, err = swID.Write([]byte("111111"))
+	return func() { utilfs.Fs.RemoveAll("/") } //nolint:errcheck
 }
 
 func TestGetUplinkRepresentorSuccess(t *testing.T) {
@@ -46,8 +49,10 @@ func TestGetUplinkRepresentorErrorMissingSwID(t *testing.T) {
 	defer teardown()
 	swIDFile := filepath.Join(NetSysDir, "eth0", netdevPhysSwitchID)
 	testErr = utilfs.Fs.Remove(swIDFile)
-	defer func(){if testErr != nil {
-		t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)}
+	defer func() {
+		if testErr != nil {
+			t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)
+		}
 	}()
 	uplinkNetdev, err := GetUplinkRepresentor(vfPciAddress)
 	assert.Error(t, err)
@@ -62,11 +67,13 @@ func TestGetUplinkRepresentorErrorEmptySwID(t *testing.T) {
 	teardown := setupUplinkRepresentorEnv(t, vfPciAddress)
 	defer teardown()
 	swIDFile := filepath.Join(NetSysDir, "eth0", netdevPhysSwitchID)
-	swId, testErr := utilfs.Fs.Create(swIDFile)
-	defer func(){if testErr != nil {
-		t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)}
+	swID, testErr := utilfs.Fs.Create(swIDFile)
+	defer func() {
+		if testErr != nil {
+			t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)
+		}
 	}()
-	_, testErr = swId.Write([]byte(""))
+	_, testErr = swID.Write([]byte(""))
 	uplinkNetdev, err := GetUplinkRepresentor(vfPciAddress)
 	assert.Error(t, err)
 	assert.Equal(t, "", uplinkNetdev)
@@ -81,8 +88,10 @@ func TestGetUplinkRepresentorErrorMissingUplink(t *testing.T) {
 	defer teardown()
 	path := filepath.Join(PciSysDir, vfPciAddress)
 	testErr = utilfs.Fs.RemoveAll(path)
-	defer func(){if testErr != nil {
-		t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)}
+	defer func() {
+		if testErr != nil {
+			t.Errorf("setupUplinkRepresentorEnv, got %v", testErr)
+		}
 	}()
 	uplinkNetdev, err := GetUplinkRepresentor(vfPciAddress)
 	assert.Error(t, err)
