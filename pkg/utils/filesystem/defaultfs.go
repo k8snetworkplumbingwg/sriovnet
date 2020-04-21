@@ -35,7 +35,7 @@ func (DefaultFs) MkdirAll(path string, perm os.FileMode) error {
 }
 
 // Chtimes via os.Chtimes
-func (DefaultFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+func (DefaultFs) Chtimes(name string, atime, mtime time.Time) error {
 	return os.Chtimes(name, atime, mtime)
 }
 

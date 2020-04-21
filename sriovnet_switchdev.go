@@ -18,8 +18,7 @@ const (
 
 var physPortRe = regexp.MustCompile(`pf(\d+)vf(\d+)`)
 
-func parsePortName(physPortName string) (pfRepIndex int, vfRepIndex int, err error) {
-
+func parsePortName(physPortName string) (pfRepIndex, vfRepIndex int, err error) {
 	pfRepIndex = -1
 	vfRepIndex = -1
 
@@ -31,15 +30,15 @@ func parsePortName(physPortName string) (pfRepIndex int, vfRepIndex int, err err
 	} else {
 		// new kernel syntax of phys_port_name pfXVfY
 		matches := physPortRe.FindStringSubmatch(physPortName)
+		//nolint:gomnd
 		if len(matches) != 3 {
-			err = fmt.Errorf("Failed to parse physPortName %s", physPortName)
+			err = fmt.Errorf("failed to parse physPortName %s", physPortName)
 		} else {
 			pfRepIndex, err = strconv.Atoi(matches[1])
 			if err == nil {
 				vfRepIndex, err = strconv.Atoi(matches[2])
 			}
 		}
-
 	}
 	return pfRepIndex, vfRepIndex, err
 }
