@@ -2,7 +2,6 @@ package sriovnet
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -17,6 +16,7 @@ const (
 )
 
 var physPortRe = regexp.MustCompile(`pf(\d+)vf(\d+)`)
+var pfPhysPortNameRe = regexp.MustCompile(`p\d+`)
 
 func parsePortName(physPortName string) (pfRepIndex, vfRepIndex int, err error) {
 	pfRepIndex = -1
@@ -65,6 +65,14 @@ func GetUplinkRepresentor(vfPciAddress string) (string, error) {
 	}
 	for _, device := range devices {
 		if isSwitchdev(device.Name()) {
+			// Try to get the phys port name, if not exists then fallback to check without it
+			// phys_port_name should be in formant p<port-num> e.g p0,p1,p2 ...etc.
+			if devicePhysPortName, err := getNetDevPhysPortName(device.Name()); err == nil {
+				if !pfPhysPortNameRe.MatchString(devicePhysPortName) {
+					continue
+				}
+			}
+
 			return device.Name(), nil
 		}
 	}
@@ -90,16 +98,10 @@ func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 		if err != nil || string(deviceSwID) != string(physSwitchID) {
 			continue
 		}
-		devicePortNameFile := filepath.Join(devicePath, netdevPhysPortName)
-		_, err = os.Stat(devicePortNameFile)
-		if os.IsNotExist(err) {
-			continue
-		}
-		physPortName, err := utilfs.Fs.ReadFile(devicePortNameFile)
+		physPortNameStr, err := getNetDevPhysPortName(device.Name())
 		if err != nil {
 			continue
 		}
-		physPortNameStr := string(physPortName)
 		pfRepIndex, vfRepIndex, _ := parsePortName(physPortNameStr)
 		if pfRepIndex != -1 {
 			pfPCIAddress, err := getPCIFromDeviceName(uplink)
@@ -117,4 +119,13 @@ func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("failed to find VF representor for uplink %s", uplink)
+}
+
+func getNetDevPhysPortName(netDev string) (string, error) {
+	devicePortNameFile := filepath.Join(NetSysDir, netDev, netdevPhysPortName)
+	physPortName, err := utilfs.Fs.ReadFile(devicePortNameFile)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(physPortName)), nil
 }
