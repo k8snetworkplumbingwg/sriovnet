@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -436,4 +437,19 @@ func GetNetDevicesFromPci(pciAddress string) ([]string, error) {
 		netDevices = append(netDevices, strings.TrimSpace(netDeviceFile.Name()))
 	}
 	return netDevices, nil
+}
+
+// GetPfPciFromVfPci retrieves the parent PF PCI address of the provided VF PCI address in D:B:D.f format
+func GetPfPciFromVfPci(vfPciAddress string) (string, error) {
+	pfPath := filepath.Join(PciSysDir, vfPciAddress, "physfn")
+	pciDevDir, err := utilfs.Fs.Readlink(pfPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read physfn link, provided address may not be a VF. %v", err)
+	}
+
+	pf := path.Base(pciDevDir)
+	if pf == "" {
+		return pf, fmt.Errorf("could not find PF PCI Address")
+	}
+	return pf, err
 }

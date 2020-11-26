@@ -80,3 +80,38 @@ func TestGetNetDevicesFromPciErrorNoDevices(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, []string(nil), devNames)
 }
+
+func TestGetPfPciFromVfPci(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+	// Create PCI sysfs layout with FakfeFs
+	pfPciAddr := "0000:02:00.0"
+	pfPciPath := filepath.Join(PciSysDir, pfPciAddr)
+	vfPciAddr := "0000:02:00.6"
+	vfPciPath := filepath.Join(PciSysDir, vfPciAddr)
+
+	// PF PCI path
+	_ = utilfs.Fs.MkdirAll(pfPciPath, os.FileMode(0755))
+	// VF PCI path and physfn link
+	_ = utilfs.Fs.MkdirAll(vfPciPath, os.FileMode(0755))
+	_ = utilfs.Fs.Symlink(pfPciPath, filepath.Join(vfPciPath, "physfn"))
+
+	pf, err := GetPfPciFromVfPci(vfPciAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, pfPciAddr, pf)
+}
+
+func TestGetPfPciFromVfPciError(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+	// Create PCI sysfs layout with FakfeFs
+	pciAddr := "0000:02:00.0"
+	pciPath := filepath.Join(PciSysDir, pciAddr)
+
+	// PCI path
+	_ = utilfs.Fs.MkdirAll(pciPath, os.FileMode(0755))
+
+	pf, err := GetPfPciFromVfPci(pciAddr)
+	assert.Error(t, err)
+	assert.Equal(t, "", pf)
+}
