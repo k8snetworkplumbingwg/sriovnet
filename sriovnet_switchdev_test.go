@@ -54,9 +54,11 @@ func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
 //nolint:unparam
 func setupUplinkRepresentorEnv(t *testing.T, uplink *repContext, vfPciAddress string, vfReps []*repContext) func() {
 	var err error
-	utilfs.Fs = utilfs.NewFakeFs()
+	teardown := setupFakeFs(t)
+
 	defer func() {
 		if err != nil {
+			teardown()
 			t.Errorf("setupUplinkRepresentorEnv, got %v", err)
 		}
 	}()
@@ -66,7 +68,7 @@ func setupUplinkRepresentorEnv(t *testing.T, uplink *repContext, vfPciAddress st
 		err = setUpRepresentorLayout(vfPciAddress, rep)
 	}
 
-	return func() { utilfs.Fs.RemoveAll("/") } //nolint:errcheck
+	return func() { teardown() } //nolint:errcheck
 }
 
 func TestGetUplinkRepresentorWithPhysPortNameSuccess(t *testing.T) {
