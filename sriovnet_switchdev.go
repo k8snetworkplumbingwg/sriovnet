@@ -129,3 +129,42 @@ func getNetDevPhysPortName(netDev string) (string, error) {
 	}
 	return strings.TrimSpace(string(physPortName)), nil
 }
+
+// GetVfRepresentorSmartNIC returns VF representor on Smart-NIC for a host VF identified by pfID and vfIndex
+func GetVfRepresentorSmartNIC(pfID string, vfIndex int) (string, error) {
+	// TODO(Adrianc): This method should change to get switchID and vfIndex as input, then common logic can
+	// be shared with GetVfRepresentor, backward compatibility should be preserved when this happens.
+
+	// pfID should be 0 or 1
+	if pfID != "0" && pfID != "1" {
+		return "", fmt.Errorf("unexpected pfID(%s). should be 0 or 1", pfID)
+	}
+
+	netdevs, err := utilfs.Fs.ReadDir(NetSysDir)
+	if err != nil {
+		return "", err
+	}
+
+	// map for easy search of expected VF rep port name.
+	// Note: no supoport for Multi-Chassis Smart-NICs
+	expectedPhysPortNames := map[string]interface{}{
+		fmt.Sprintf("pf%svf%d", pfID, vfIndex):   nil,
+		fmt.Sprintf("c0pf%svf%d", pfID, vfIndex): nil,
+	}
+
+	// iterate all net devs and get phys port name
+	// if phys port name == pf<pfIndex>vf<vfIndex> or c0pf<pfIndex>vf<vfIndex> we have a match
+	for _, netdev := range netdevs {
+		// find matching VF representor
+		netdevName := netdev.Name()
+		portName, err := getNetDevPhysPortName(netdevName)
+		if err != nil {
+			// skip
+			continue
+		}
+		if _, ok := expectedPhysPortNames[portName]; ok {
+			return netdevName, nil
+		}
+	}
+	return "", fmt.Errorf("vf representor for pfID:%s, vfIndex: %d  not found", pfID, vfIndex)
+}
