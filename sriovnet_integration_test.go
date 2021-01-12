@@ -1,5 +1,19 @@
 // +build integration
 
+/*
+NOTE:
+====
+This test although not usable as is, since netdev names and configuration differs from one setup to the next
+is useful for testing your changes on a real setup.
+
+for new functionality in sriovnet package add a new integration test case.
+to run an existing test modify the netdev/VF in the set to fit your setup and execute the test.
+
+Build and run integration test:
+==============================
+# go test --tags integration -v -run <TestName>
+ */
+
 package sriovnet
 
 import (
@@ -200,4 +214,26 @@ func TestGetVfNetdevName(t *testing.T) {
 			t.Log("Allocated VF: ", vfList[i].Index, "Netdev: ", vfName[i])
 		}
 	}
+}
+
+func TestIntegrationGetPfPciFromVfPci(t *testing.T) {
+	vf := "0000:05:00.6"
+	pf, err := GetPfPciFromVfPci(vf)
+	if err != nil {
+		t.Log("GetPfPciFromVfPci", "VF PCI: ", vf, "Error: ", err)
+		t.Fatal()
+	}
+	t.Log("VF: ", vf, "PF: ", pf)
+}
+
+func TestIntegrationGetVfRepresentorSmartNIC(t *testing.T) {
+	pfID := "0"
+	vfIdx := "2"
+	t.Log("GetVfRepresentorSmartNIC ", "PF ID: ", pfID, "VF Index: ", vfIdx)
+	rep, err := GetVfRepresentorSmartNIC(pfID, vfIdx)
+	if err != nil {
+		t.Log("GetVfRepresentorSmartNIC ", "Error: ", err)
+		t.Fatal()
+	}
+	t.Log("VF Representor: ", rep)
 }

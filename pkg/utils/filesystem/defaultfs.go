@@ -49,6 +49,16 @@ func (DefaultFs) Remove(name string) error {
 	return os.Remove(name)
 }
 
+// Readlink via os.Readlink
+func (DefaultFs) Readlink(name string) (string, error) {
+	return os.Readlink(name)
+}
+
+// Symlink via os.Symlink
+func (DefaultFs) Symlink(oldname, newname string) error {
+	return os.Symlink(oldname, newname)
+}
+
 // ReadFile via ioutil.ReadFile
 func (DefaultFs) ReadFile(filename string) ([]byte, error) {
 	return ioutil.ReadFile(filename)
