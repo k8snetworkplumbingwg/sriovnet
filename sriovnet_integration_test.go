@@ -228,7 +228,7 @@ func TestIntegrationGetPfPciFromVfPci(t *testing.T) {
 
 func TestIntegrationGetVfRepresentorSmartNIC(t *testing.T) {
 	pfID := "0"
-	vfIdx := 2
+	vfIdx := "2"
 	t.Log("GetVfRepresentorSmartNIC ", "PF ID: ", pfID, "VF Index: ", vfIdx)
 	rep, err := GetVfRepresentorSmartNIC(pfID, vfIdx)
 	if err != nil {

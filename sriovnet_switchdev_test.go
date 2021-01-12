@@ -196,7 +196,7 @@ func TestGetVfRepresentorSmartNIC(t *testing.T) {
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
 
-	vfRep, err := GetVfRepresentorSmartNIC("0", 2)
+	vfRep, err := GetVfRepresentorSmartNIC("0", "2")
 	assert.NoError(t, err)
 	assert.Equal(t, "eth2", vfRep)
 }
@@ -217,13 +217,19 @@ func TestGetVfRepresentorSmartNICNoRep(t *testing.T) {
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
 
-	vfRep, err := GetVfRepresentorSmartNIC("1", 2)
+	vfRep, err := GetVfRepresentorSmartNIC("1", "2")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
 }
 
-func TestGetVfRepresentorInvalidPfID(t *testing.T) {
-	vfRep, err := GetVfRepresentorSmartNIC("invalid", 2)
+func TestGetVfRepresentorSmartNICInvalidPfID(t *testing.T) {
+	vfRep, err := GetVfRepresentorSmartNIC("invalid", "2")
+	assert.Error(t, err)
+	assert.Equal(t, "", vfRep)
+}
+
+func TestGetVfRepresentorSmartNICInvalidVfIndex(t *testing.T) {
+	vfRep, err := GetVfRepresentorSmartNIC("1", "invalid")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
 }
