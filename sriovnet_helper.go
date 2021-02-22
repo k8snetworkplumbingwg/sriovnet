@@ -70,7 +70,7 @@ func getCurrentVfCount(pfNetdevName string) (int, error) {
 	return curVfs, nil
 }
 
-func vfNetdevNameFromParent(pfNetdevName string, vfIndex int) string {
+func VfNetdevNameFromParent(pfNetdevName string, vfIndex int) string {
 	devDirName := netDevDeviceDir(pfNetdevName)
 	vfNetdev, _ := lsFilesWithPrefix(fmt.Sprintf("%s/%s%v/net", devDirName,
 		netDevVfDevicePrefix, vfIndex), "", false)
@@ -89,7 +89,7 @@ func readPCIsymbolicLink(symbolicLink string) (string, error) {
 
 	return pciDevDir[3:], err
 }
-func vfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
+func VfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
 	symbolicLink := filepath.Join(NetSysDir, pfNetdevName, pcidevPrefix, fmt.Sprintf("%s%v",
 		netDevVfDevicePrefix, vfIndex))
 	pciAddress, err := readPCIsymbolicLink(symbolicLink)

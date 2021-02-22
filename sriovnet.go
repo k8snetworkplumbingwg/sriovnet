@@ -126,8 +126,8 @@ func GetPfNetdevHandle(pfNetdevName string) (*PfNetdevHandle, error) {
 	for _, vfDir := range list {
 		vfIndexStr := strings.TrimPrefix(vfDir, netDevVfDevicePrefix)
 		vfIndex, _ := strconv.Atoi(vfIndexStr)
-		vfNetdevName := vfNetdevNameFromParent(pfNetdevName, vfIndex)
-		pciAddress, err := vfPCIDevNameFromVfIndex(pfNetdevName, vfIndex)
+		vfNetdevName := VfNetdevNameFromParent(pfNetdevName, vfIndex)
+		pciAddress, err := VfPCIDevNameFromVfIndex(pfNetdevName, vfIndex)
 		if err != nil {
 			log.Printf("Failed to read PCI Address for VF %v from PF %v: %v\n",
 				vfNetdevName, pfNetdevName, err)
@@ -183,7 +183,7 @@ func GetVfDefaultMacAddr(vfNetdevName string) (string, error) {
 }
 
 func SetVfDefaultMacAddress(handle *PfNetdevHandle, vf *VfObj) error {
-	netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+	netdevName := VfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 	ethHandle, err1 := netlink.LinkByName(netdevName)
 	if err1 != nil {
 		return err1
@@ -307,7 +307,7 @@ func ConfigVfs(handle *PfNetdevHandle, privileged bool) error {
 			break
 		}
 		// skip VFs in another namespace
-		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+		netdevName := VfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 		if _, err = netlink.LinkByName(netdevName); err != nil {
 			continue
 		}
@@ -359,7 +359,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 			continue
 		}
 
-		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+		netdevName := VfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 		macAddr, _ := GetVfDefaultMacAddr(netdevName)
 		if macAddr != vfMacAddress {
 			continue
@@ -380,7 +380,7 @@ func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
 func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
 	vfNetdevName := fmt.Sprintf("%s%v", netDevVfDevicePrefix, vfIndex)
 	for _, vf := range handle.List {
-		netdevName := vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+		netdevName := VfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 		if vf.Allocated && netdevName == vfNetdevName {
 			vf.Allocated = true
 			return nil
@@ -390,7 +390,7 @@ func FreeVfByNetdevName(handle *PfNetdevHandle, vfIndex int) error {
 }
 
 func GetVfNetdevName(handle *PfNetdevHandle, vf *VfObj) string {
-	return vfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
+	return VfNetdevNameFromParent(handle.PfNetdevName, vf.Index)
 }
 
 // GetVfIndexByPciAddress gets a VF PCI address (e.g '0000:03:00.4') and
