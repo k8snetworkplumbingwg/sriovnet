@@ -17,9 +17,17 @@ type repContext struct {
 	PhysSwitchID string // conditionally create if string is empty under /sys/class/net/<Name>/phys_switch_id
 }
 
+// setUpRepresentorLayout sets up the representor filesystem layout.
+// Note: should not be called directly as it expects FakeFs to be initialized beforehand.
 func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
+	// This method assumes FakeFs it already set up
+	_, ok := utilfs.Fs.(*utilfs.FakeFs)
+	if !ok {
+		return fmt.Errorf("fakeFs was not initialized")
+	}
+
 	if vfPciAddress != "" {
-		path := filepath.Join(PciSysDir, vfPciAddress, "physfn/net", rep.Name)
+		path := filepath.Join(PciSysDir, vfPciAddress, "physfn", "net", rep.Name)
 		err := utilfs.Fs.MkdirAll(path, os.FileMode(0755))
 		if err != nil {
 			return err
@@ -54,6 +62,7 @@ func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
 }
 
 //nolint:unparam
+// setupUplinkRepresentorEnv sets up the uplink representor and related VF representors filesystem layout.
 func setupUplinkRepresentorEnv(t *testing.T, uplink *repContext, vfPciAddress string, vfReps []*repContext) func() {
 	var err error
 	teardown := setupRepresentorEnv(t, vfPciAddress, vfReps)
@@ -72,6 +81,7 @@ func setupUplinkRepresentorEnv(t *testing.T, uplink *repContext, vfPciAddress st
 	return teardown
 }
 
+// setupRepresentorEnv sets up VF representors filesystem layout.
 func setupRepresentorEnv(t *testing.T, vfPciAddress string, vfReps []*repContext) func() {
 	var err error
 	teardown := setupFakeFs(t)
@@ -88,6 +98,21 @@ func setupRepresentorEnv(t *testing.T, vfPciAddress string, vfReps []*repContext
 	}
 
 	return teardown
+}
+
+// setupSmartNICConfigFileForPort sets the config file content for a specific smart-NIC port of a given uplink
+func setupSmartNICConfigFileForPort(t *testing.T, uplink, portName, fileContent string) {
+	// This method assumes FakeFs it already set up
+	assert.IsType(t, &utilfs.FakeFs{}, utilfs.Fs)
+
+	path := filepath.Join(NetSysDir, uplink, "smart_nic", portName)
+	err := utilfs.Fs.MkdirAll(path, os.FileMode(0755))
+	assert.NoError(t, err)
+
+	repConfigFilePath := filepath.Join(path, "config")
+	repConfigFileName, _ := utilfs.Fs.Create(repConfigFilePath)
+	_, err = repConfigFileName.Write([]byte(fileContent))
+	assert.NoError(t, err)
 }
 
 func TestGetUplinkRepresentorWithPhysPortNameSuccess(t *testing.T) {
@@ -232,4 +257,105 @@ func TestGetVfRepresentorSmartNICInvalidVfIndex(t *testing.T) {
 	vfRep, err := GetVfRepresentorSmartNIC("1", "invalid")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
+}
+
+func TestGetVfRepresentorPortFlavour(t *testing.T) {
+	vfReps := []*repContext{
+		{
+			Name:         "eth0",
+			PhysPortName: "p0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth1",
+			PhysPortName: "pf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth2",
+			PhysPortName: "pf0vf1",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth44",
+			PhysPortName: "pf0sf44",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+	}
+	teardown := setupRepresentorEnv(t, "", vfReps)
+	defer teardown()
+
+	tcases := []struct {
+		netdev     string
+		expected   PortFlavour
+		shouldFail bool
+	}{
+		{netdev: "eth0", expected: PORT_FLAVOUR_PHYSICAL, shouldFail: false},
+		{netdev: "eth1", expected: PORT_FLAVOUR_PCI_PF, shouldFail: false},
+		{netdev: "eth2", expected: PORT_FLAVOUR_PCI_VF, shouldFail: false},
+		{netdev: "eth44", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: false},
+		{netdev: "foobar", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		f, err := GetRepresentorPortFlavour(tcase.netdev)
+		if tcase.shouldFail {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tcase.expected, f)
+	}
+}
+
+func TestGetRepresentorMacAddress(t *testing.T) {
+	// Create uplink and PF representor relate files
+	vfReps := []*repContext{
+		{
+			Name:         "eth0",
+			PhysPortName: "p0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "pf0hpf",
+			PhysPortName: "pf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "rep_0",
+			PhysPortName: "pf0vf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+	}
+	teardown := setupRepresentorEnv(t, "", vfReps)
+	defer teardown()
+
+	// Create PF representor config file
+	repConfigFile := `
+MAC        : 0c:42:a1:de:cf:7c
+MaxTxRate  : 0
+State      : Follow
+`
+	setupSmartNICConfigFileForPort(t, "eth0", "pf", repConfigFile)
+	// Run test
+	tcases := []struct {
+		netdev      string
+		expectedMac string
+		shouldFail  bool
+	}{
+		{netdev: "pf0hpf", expectedMac: "0c:42:a1:de:cf:7c", shouldFail: false},
+		{netdev: "rep_0", expectedMac: "", shouldFail: true},
+		{netdev: "p0", expectedMac: "", shouldFail: true},
+		{netdev: "foobar", expectedMac: "", shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		mac, err := GetRepresentorMacAddress(tcase.netdev)
+		if tcase.shouldFail {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, tcase.expectedMac, mac.String())
+		}
+	}
 }
