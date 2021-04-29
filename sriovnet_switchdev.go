@@ -48,7 +48,7 @@ func parsePortName(physPortName string) (pfRepIndex, vfRepIndex int, err error) 
 	if err == nil {
 		vfRepIndex = physPortNameInt
 	} else {
-		// new kernel syntax of phys_port_name pfXVfY
+		// new kernel syntax of phys_port_name [cZ]pfXVfY
 		matches := vfPortRepRegex.FindStringSubmatch(physPortName)
 		//nolint:gomnd
 		if len(matches) != 3 {
@@ -204,7 +204,7 @@ func GetVfRepresentorSmartNIC(pfID, vfIndex string) (string, error) {
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("vf representor for pfID:%s, vfIndex: %s not found", pfID, vfIndex)
+		return "", fmt.Errorf("vf representor for pfID:%s, vfIndex:%s not found", pfID, vfIndex)
 	}
 	return netdev, nil
 }
@@ -236,6 +236,14 @@ func GetRepresentorPortFlavour(netdev string) (PortFlavour, error) {
 	return PORT_FLAVOUR_UNKNOWN, nil
 }
 
+// parseSmartNICConfigFileOutput parses the config file content of a smart-nic
+// representor port. The format of the file is a set of <key>:<value> pairs as follows:
+//
+// ```
+//  MAC        : 0c:42:a1:c6:cf:7c
+//  MaxTxRate  : 0
+//  State      : Follow
+// ```
 func parseSmartNICConfigFileOutput(out string) map[string]string {
 	configMap := make(map[string]string)
 	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
