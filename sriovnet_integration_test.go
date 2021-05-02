@@ -12,7 +12,7 @@ to run an existing test modify the netdev/VF in the set to fit your setup and ex
 Build and run integration test:
 ==============================
 # go test --tags integration -v -run <TestName>
- */
+*/
 
 package sriovnet
 
@@ -236,4 +236,88 @@ func TestIntegrationGetVfRepresentorSmartNIC(t *testing.T) {
 		t.Fatal()
 	}
 	t.Log("VF Representor: ", rep)
+}
+
+func TestIntegrationGetRepresentorPortFlavour(t *testing.T) {
+	tcases := []struct {
+		netdev          string
+		expectedFlavour PortFlavour
+		shouldFail      bool
+	}{
+		{netdev: "p0", expectedFlavour: PORT_FLAVOUR_PHYSICAL},
+		{netdev: "pf0hpf", expectedFlavour: PORT_FLAVOUR_PCI_PF},
+		{netdev: "pf0vf4", expectedFlavour: PORT_FLAVOUR_PCI_VF},
+		{netdev: "fooBar", expectedFlavour: PORT_FLAVOUR_UNKNOWN, shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		flava, err := GetRepresentorPortFlavour(tcase.netdev)
+		if tcase.shouldFail == true && err == nil {
+			t.Fatal("Expected failure but no error occured")
+		}
+		if flava != tcase.expectedFlavour {
+			t.Fatal("Actual flavour does not match expected flavour", flava, "!=", tcase.expectedFlavour)
+		}
+		t.Log("GetRepresentorPortFlavour", "netdev: ", tcase.netdev, "flavour: ", flava)
+	}
+}
+
+func TestIntegrationGetRepresentorMacAddress(t *testing.T) {
+	tcases := []struct {
+		netdev      string
+		expectedMac string
+		shouldFail  bool
+	}{
+		{netdev: "pf0hpf", expectedMac: "0c:42:a1:de:cf:7c", shouldFail: false},
+		{netdev: "p0", expectedMac: "", shouldFail: true},
+		{netdev: "pf0vf4", expectedMac: "", shouldFail: true},
+		{netdev: "fooBar", expectedMac: "", shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		mac, err := GetRepresentorMacAddress(tcase.netdev)
+		if tcase.shouldFail {
+			if err == nil {
+				t.Fatal("Expected failure but no error occured")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal("GetRepresentorMacAddress failed with error: ", err)
+		}
+		if mac.String() != tcase.expectedMac {
+			t.Fatal("Actual MAC does not match expected MAC", mac, "!=", tcase.expectedMac)
+		}
+		t.Log("GetRepresentorMacAddress", "netdev: ", tcase.netdev, "Mac: ", mac)
+	}
+}
+
+func TestIntegrationGetVfRepresentor(t *testing.T) {
+	tcases := []struct {
+		uplink     string
+		vfIndex    int
+		expected   string
+		shouldFail bool
+	}{
+		{uplink: "enp3s0f0", vfIndex: 2, expected: "enp3s0f0_2", shouldFail: false},
+		{uplink: "foobar", vfIndex: 2, expected: "", shouldFail: true},
+		{uplink: "enp3s0", vfIndex: 44, expected: "", shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		rep, err := GetVfRepresentor(tcase.uplink, tcase.vfIndex)
+		if tcase.shouldFail {
+			if err == nil {
+				t.Fatal("Expected failure but no error occured")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal("GetVfRepresentor failed with error: ", err)
+		}
+		if rep != tcase.expected {
+			t.Fatal("Actual Representor does not match expected Representor", rep, "!=", tcase.expected)
+		}
+		t.Log("GetVfRepresentor", "uplink: ", tcase.uplink, " VF Index: ", tcase.vfIndex, " Rep: ", rep)
+	}
 }
