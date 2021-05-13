@@ -255,6 +255,9 @@ func TestIntegrationGetRepresentorPortFlavour(t *testing.T) {
 		if tcase.shouldFail == true && err == nil {
 			t.Fatal("Expected failure but no error occured")
 		}
+		if err != nil {
+			t.Log("GetRepresentorPortFlavour got error", err)
+		}
 		if flava != tcase.expectedFlavour {
 			t.Fatal("Actual flavour does not match expected flavour", flava, "!=", tcase.expectedFlavour)
 		}
