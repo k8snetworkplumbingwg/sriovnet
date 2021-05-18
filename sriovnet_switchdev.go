@@ -263,11 +263,12 @@ func parseSmartNICConfigFileOutput(out string) map[string]string {
 	return configMap
 }
 
-// GetRepresentorMacAddress returns the MAC address of the port identified by the given representor netdev
+// GetRepresentorPeerMacAddress returns the MAC address of the peer netdev associated with the given
+// representor netdev
 // Note:
 //    This method functionality is currently supported only for Smart-NICs.
 //    Currently only netdev representors with PORT_FLAVOUR_PCI_PF are supported
-func GetRepresentorMacAddress(netdev string) (net.HardwareAddr, error) {
+func GetRepresentorPeerMacAddress(netdev string) (net.HardwareAddr, error) {
 	flavor, err := GetRepresentorPortFlavour(netdev)
 	if err != nil {
 		return nil, fmt.Errorf("unknown port flavour for netdev %s. %v", netdev, err)

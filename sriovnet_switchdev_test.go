@@ -308,7 +308,7 @@ func TestGetVfRepresentorPortFlavour(t *testing.T) {
 	}
 }
 
-func TestGetRepresentorMacAddress(t *testing.T) {
+func TestGetRepresentorPeerMacAddress(t *testing.T) {
 	// Create uplink and PF representor relate files
 	vfReps := []*repContext{
 		{
@@ -350,7 +350,7 @@ State      : Follow
 	}
 
 	for _, tcase := range tcases {
-		mac, err := GetRepresentorMacAddress(tcase.netdev)
+		mac, err := GetRepresentorPeerMacAddress(tcase.netdev)
 		if tcase.shouldFail {
 			assert.Error(t, err)
 		} else {
