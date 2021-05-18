@@ -150,7 +150,7 @@ func getNetDevPhysPortName(netDev string) (string, error) {
 	return strings.TrimSpace(string(physPortName)), nil
 }
 
-// findNetdevWithPortNameCriteria returns netdev that matches a criteria function on the representor
+// findNetdevWithPortNameCriteria returns representor netdev that matches a criteria function on the
 // physical port name
 func findNetdevWithPortNameCriteria(criteria func(string) bool) (string, error) {
 	netdevs, err := utilfs.Fs.ReadDir(NetSysDir)
@@ -161,6 +161,12 @@ func findNetdevWithPortNameCriteria(criteria func(string) bool) (string, error) 
 	for _, netdev := range netdevs {
 		// find matching VF representor
 		netdevName := netdev.Name()
+
+		// skip non switchdev netdevs
+		if !isSwitchdev(netdevName) {
+			continue
+		}
+
 		portName, err := getNetDevPhysPortName(netdevName)
 		if err != nil {
 			continue
@@ -287,6 +293,8 @@ func GetRepresentorMacAddress(netdev string) (net.HardwareAddr, error) {
 	}
 	uplinkPhysPortName := "p" + portNum[1]
 	// Find uplink netdev for that port
+	// Note(adrianc): As we support only Smart-NICs ATM we do not need to deal with netdevs from different
+	// eswitch (i.e different switch IDs).
 	uplinkNetdev, err := findNetdevWithPortNameCriteria(func(pname string) bool { return pname == uplinkPhysPortName })
 	if err != nil {
 		return nil, fmt.Errorf("failed to find uplink port for netdev %s. %v", netdev, err)
@@ -295,7 +303,8 @@ func GetRepresentorMacAddress(netdev string) (net.HardwareAddr, error) {
 	configPath := filepath.Join(NetSysDir, uplinkNetdev, "smart_nic", "pf", "config")
 	out, err := utilfs.Fs.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read smart-nic config for %s. %v", netdev, err)
+		return nil, fmt.Errorf("failed to read smart-nic config via uplink %s for %s. %v",
+			uplinkNetdev, netdev, err)
 	}
 	config := parseSmartNICConfigFileOutput(string(out))
 	macStr, ok := config["MAC"]
