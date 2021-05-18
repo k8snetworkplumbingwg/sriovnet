@@ -262,7 +262,7 @@ func TestIntegrationGetRepresentorPortFlavour(t *testing.T) {
 	}
 }
 
-func TestIntegrationGetRepresentorMacAddress(t *testing.T) {
+func TestIntegrationGetRepresentorPeerMacAddress(t *testing.T) {
 	tcases := []struct {
 		netdev      string
 		expectedMac string
@@ -275,7 +275,7 @@ func TestIntegrationGetRepresentorMacAddress(t *testing.T) {
 	}
 
 	for _, tcase := range tcases {
-		mac, err := GetRepresentorMacAddress(tcase.netdev)
+		mac, err := GetRepresentorPeerMacAddress(tcase.netdev)
 		if tcase.shouldFail {
 			if err == nil {
 				t.Fatal("Expected failure but no error occured")
@@ -283,12 +283,12 @@ func TestIntegrationGetRepresentorMacAddress(t *testing.T) {
 			continue
 		}
 		if err != nil {
-			t.Fatal("GetRepresentorMacAddress failed with error: ", err)
+			t.Fatal("GetRepresentorPeerMacAddress failed with error: ", err)
 		}
 		if mac.String() != tcase.expectedMac {
 			t.Fatal("Actual MAC does not match expected MAC", mac, "!=", tcase.expectedMac)
 		}
-		t.Log("GetRepresentorMacAddress", "netdev: ", tcase.netdev, "Mac: ", mac)
+		t.Log("GetRepresentorPeerMacAddress", "netdev: ", tcase.netdev, "Mac: ", mac)
 	}
 }
 
