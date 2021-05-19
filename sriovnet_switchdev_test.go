@@ -2,13 +2,18 @@ package sriovnet
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/vishvananda/netlink"
 
 	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
+	"github.com/Mellanox/sriovnet/pkg/utils/netlinkops"
+	netlinkopsMocks "github.com/Mellanox/sriovnet/pkg/utils/netlinkops/mocks"
 )
 
 type repContext struct {
@@ -297,7 +302,12 @@ func TestGetVfRepresentorPortFlavour(t *testing.T) {
 		{netdev: "foobar", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: true},
 	}
 
+	defer netlinkops.ResetNetlinkOps()
 	for _, tcase := range tcases {
+		nlOpsMock := netlinkopsMocks.NetlinkOps{}
+		netlinkops.SetNetlinkOps(&nlOpsMock)
+		nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(
+			nil, fmt.Errorf("failed to get devlink port"))
 		f, err := GetRepresentorPortFlavour(tcase.netdev)
 		if tcase.shouldFail {
 			assert.Error(t, err)
@@ -306,6 +316,34 @@ func TestGetVfRepresentorPortFlavour(t *testing.T) {
 		}
 		assert.Equal(t, tcase.expected, f)
 	}
+}
+
+func TestGetVfRepresentorPortFlavourDevlink(t *testing.T) {
+	nlOpsMock := netlinkopsMocks.NetlinkOps{}
+	netlinkops.SetNetlinkOps(&nlOpsMock)
+	defer netlinkops.ResetNetlinkOps()
+
+	teardown := setupRepresentorEnv(t, "", []*repContext{{
+		Name:         "enp3s0f0_0",
+		PhysPortName: "pf0vf0",
+		PhysSwitchID: "c2cfc60003a1420c",
+	}})
+	defer teardown()
+
+	nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(
+		&netlink.DevlinkPort{
+			BusName:       "pci",
+			DeviceName:    "0000:03:00.0",
+			PortIndex:     126654,
+			PortType:      2, // ETH
+			NetdeviceName: "enp3s0f0_0",
+			PortFlavour:   PORT_FLAVOUR_PCI_VF,
+			Fn:            nil,
+		}, nil)
+
+	f, err := GetRepresentorPortFlavour("enp3s0f0_0")
+	assert.NoError(t, err)
+	assert.Equal(t, PortFlavour(PORT_FLAVOUR_PCI_VF), f)
 }
 
 func TestGetRepresentorPeerMacAddress(t *testing.T) {
@@ -329,6 +367,7 @@ func TestGetRepresentorPeerMacAddress(t *testing.T) {
 	}
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
+	defer netlinkops.ResetNetlinkOps()
 
 	// Create PF representor config file
 	repConfigFile := `
@@ -350,6 +389,11 @@ State      : Follow
 	}
 
 	for _, tcase := range tcases {
+		nlOpsMock := netlinkopsMocks.NetlinkOps{}
+		netlinkops.SetNetlinkOps(&nlOpsMock)
+		nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(
+			nil, fmt.Errorf("failed to get devlink port"))
+
 		mac, err := GetRepresentorPeerMacAddress(tcase.netdev)
 		if tcase.shouldFail {
 			assert.Error(t, err)
@@ -358,4 +402,33 @@ State      : Follow
 			assert.Equal(t, tcase.expectedMac, mac.String())
 		}
 	}
+}
+
+func TestGetRepresentorPeerMacAddressDevlink(t *testing.T) {
+	nlOpsMock := netlinkopsMocks.NetlinkOps{}
+	netlinkops.SetNetlinkOps(&nlOpsMock)
+	defer netlinkops.ResetNetlinkOps()
+
+	teardown := setupRepresentorEnv(t, "", []*repContext{{
+		Name:         "pf0hpf",
+		PhysPortName: "pf0",
+		PhysSwitchID: "c2cfc60003a1420c",
+	}})
+	defer teardown()
+
+	dlport := netlink.DevlinkPort{
+		BusName:       "pci",
+		DeviceName:    "0000:03:00.0",
+		PortIndex:     126654,
+		PortType:      2, // ETH
+		NetdeviceName: "pf0hpf",
+		PortFlavour:   PORT_FLAVOUR_PCI_PF,
+		Fn:            &netlink.DevlinkPortFn{HwAddr: net.HardwareAddr{0x0c, 0x42, 0xa1, 0xde, 0xcf, 0x7c}},
+	}
+	nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(&dlport, nil)
+	nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(&dlport, nil)
+
+	mac, err := GetRepresentorPeerMacAddress("pf0hpf")
+	assert.NoError(t, err)
+	assert.Equal(t, "0c:42:a1:de:cf:7c", mac.String())
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
+	"github.com/Mellanox/sriovnet/pkg/utils/netlinkops"
 )
 
 const (
@@ -22,10 +23,13 @@ type PortFlavour uint16
 // nolint:golint,stylecheck
 const (
 	PORT_FLAVOUR_PHYSICAL = iota
-	_
-	_
+	PORT_FLAVOUR_CPU
+	PORT_FLAVOUR_DSA
 	PORT_FLAVOUR_PCI_PF
 	PORT_FLAVOUR_PCI_VF
+	PORT_FLAVOUR_VIRTUAL
+	PORT_FLAVOUR_UNUSED
+	PORT_FLAVOUR_PCI_SF
 	PORT_FLAVOUR_UNKNOWN = 0xffff
 )
 
@@ -222,7 +226,14 @@ func GetRepresentorPortFlavour(netdev string) (PortFlavour, error) {
 	if !isSwitchdev(netdev) {
 		return PORT_FLAVOUR_UNKNOWN, fmt.Errorf("net device %s is does not represent an eswitch port", netdev)
 	}
-	// TODO(adrianc): switch implementation for devlink
+
+	// Attempt to get information via devlink (Kernel >= 5.9.0)
+	port, err := netlinkops.GetNetlinkOps().DevLinkGetPortByNetdevName(netdev)
+	if err == nil {
+		return PortFlavour(port.PortFlavour), nil
+	}
+
+	// Fallback to Get PortFlavour by phys_port_name
 	// read phy_port_name
 	portName, err := getNetDevPhysPortName(netdev)
 	if err != nil {
@@ -279,8 +290,16 @@ func GetRepresentorPeerMacAddress(netdev string) (net.HardwareAddr, error) {
 	if flavor != PORT_FLAVOUR_PCI_PF {
 		return nil, fmt.Errorf("unsupported port flavour for netdev %s", netdev)
 	}
-	// TODO(adrianc): switch implementation for devlink and generalize for non-smartNIC cases and other port flavours
 
+	// Attempt to get information via devlink (Kernel >= 5.9.0)
+	port, err := netlinkops.GetNetlinkOps().DevLinkGetPortByNetdevName(netdev)
+	if err == nil {
+		if port.Fn != nil {
+			return port.Fn.HwAddr, nil
+		}
+	}
+
+	// Get information via sysfs
 	// read phy_port_name
 	portName, err := getNetDevPhysPortName(netdev)
 	if err != nil {
