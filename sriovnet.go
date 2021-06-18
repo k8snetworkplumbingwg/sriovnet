@@ -49,6 +49,16 @@ func SetPFLinkUp(pfNetdevName string) error {
 	return netlinkops.GetNetlinkOps().LinkSetUp(handle)
 }
 
+func IsVfPciVfioBound(pciAddr string) bool {
+	driverLink := filepath.Join(PciSysDir, pciAddr, "driver")
+	driverPath, err := utilfs.Fs.Readlink(driverLink)
+	if err != nil {
+		return false
+	}
+	driverName := filepath.Base(driverPath)
+	return driverName == "vfio-pci"
+}
+
 func IsSriovSupported(netdevName string) bool {
 	maxvfs, err := getMaxVfCount(netdevName)
 	if maxvfs == 0 || err != nil {
