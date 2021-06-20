@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	fakeFsRoot = "/tmp/sriovnet-tests"
+	fakeFsRoot       = "/tmp/sriovnet-tests"
+	pciSysDriversDir = "/sys/bus/pci/drivers"
 )
 
 func setupFakeFs(t *testing.T) func() {
@@ -114,4 +115,42 @@ func TestGetPfPciFromVfPciError(t *testing.T) {
 	pf, err := GetPfPciFromVfPci(pciAddr)
 	assert.Error(t, err)
 	assert.Equal(t, "", pf)
+}
+
+func TestIsVfPciVfioBound(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	// Create PCI sysfs layout with FakeFs. We want to achieve this:
+	// /sys/bus/pci/devices/0000:02:00.0/driver -> ../../../../bus/pci/drivers/vfio-pci
+	pciAddr := "0000:02:00.0"
+	pciPath := filepath.Join(PciSysDir, pciAddr)
+	vfioDriverPath := filepath.Join(pciSysDriversDir, "vfio-pci")
+
+	_ = utilfs.Fs.MkdirAll(pciPath, os.FileMode(0755))
+	_ = utilfs.Fs.MkdirAll(vfioDriverPath, os.FileMode(0755))
+	symlinkTarget := filepath.Join(pciPath, "driver")
+	_ = utilfs.Fs.Symlink(vfioDriverPath, symlinkTarget)
+
+	vfioDevice := IsVfPciVfioBound(pciAddr)
+	assert.Equal(t, true, vfioDevice)
+}
+
+func TestIsVfPciVfioBoundFalse(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	// Create PCI sysfs layout with FakeFs. We want to achieve this:
+	// /sys/bus/pci/devices/0000:01:04.2/driver -> ../../../../bus/pci/drivers/mlx5_core
+	pciAddr := "0000:01:04.2"
+	pciPath := filepath.Join(PciSysDir, pciAddr)
+	mlx5CoreDriverPath := filepath.Join(pciSysDriversDir, "mlx5_core")
+
+	_ = utilfs.Fs.MkdirAll(mlx5CoreDriverPath, os.FileMode(0755))
+	_ = utilfs.Fs.MkdirAll(pciPath, os.FileMode(0755))
+	symlinkTarget := filepath.Join(pciPath, "driver")
+	_ = utilfs.Fs.Symlink(mlx5CoreDriverPath, symlinkTarget)
+
+	vfioDevice := IsVfPciVfioBound(pciAddr)
+	assert.Equal(t, false, vfioDevice)
 }
