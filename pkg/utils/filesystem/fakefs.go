@@ -76,6 +76,11 @@ func (fs *FakeFs) ReadFile(filename string) ([]byte, error) {
 	return fs.a.ReadFile(filename)
 }
 
+// WriteFile via afero.WriteFile
+func (fs *FakeFs) WriteFile(filename string, data []byte, perm os.FileMode) error {
+	return fs.a.WriteFile(filename, data, perm)
+}
+
 // TempDir via afero.TempDir
 func (fs *FakeFs) TempDir(dir, prefix string) (string, error) {
 	return fs.a.TempDir(dir, prefix)

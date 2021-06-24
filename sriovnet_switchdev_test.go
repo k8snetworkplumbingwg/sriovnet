@@ -432,3 +432,39 @@ func TestGetRepresentorPeerMacAddressDevlink(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0c:42:a1:de:cf:7c", mac.String())
 }
+
+func TestSetRepresentorPeerMacAddress(t *testing.T) {
+	nlOpsMock := netlinkopsMocks.NetlinkOps{}
+	netlinkops.SetNetlinkOps(&nlOpsMock)
+	defer netlinkops.ResetNetlinkOps()
+
+	teardown := setupRepresentorEnv(t, "", []*repContext{
+		{
+			Name:         "pf0vf24",
+			PhysPortName: "pf0vf24",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "p0",
+			PhysPortName: "p0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+	})
+	defer teardown()
+
+	// Create PCI sysfs layout with FakeFs. We want to achieve this:
+	// /sys/class/net
+	pfID := "0"
+	vfIdx := "24"
+	mac := net.HardwareAddr{0, 0, 0, 1, 2, 3}
+
+	path := fmt.Sprintf("%s/p%s/smart_nic/vf%s", NetSysDir, pfID, vfIdx)
+	_ = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
+
+	macFile := filepath.Join(path, "mac")
+	_, _ = utilfs.Fs.Create(macFile)
+
+	nlOpsMock.On("DevLinkGetPortByNetdevName", mock.AnythingOfType("string")).Return(nil, fmt.Errorf("no devlink support"))
+	err := SetRepresentorPeerMacAddress("pf0vf24", mac)
+	assert.NoError(t, err)
+}

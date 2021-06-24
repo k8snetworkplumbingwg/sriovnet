@@ -337,3 +337,48 @@ func GetRepresentorPeerMacAddress(netdev string) (net.HardwareAddr, error) {
 	}
 	return mac, nil
 }
+
+// SetRepresentorPeerMacAddress sets the given MAC addresss of the peer netdev associated with the given
+// representor netdev.
+// Note: This method functionality is currently supported only for Smart-NICs.
+// Currently only netdev representors with PORT_FLAVOUR_PCI_VF are supported
+func SetRepresentorPeerMacAddress(netdev string, mac net.HardwareAddr) error {
+	flavor, err := GetRepresentorPortFlavour(netdev)
+	if err != nil {
+		return fmt.Errorf("unknown port flavour for netdev %s. %v", netdev, err)
+	}
+	if flavor == PORT_FLAVOUR_UNKNOWN {
+		return fmt.Errorf("unknown port flavour for netdev %s", netdev)
+	}
+	if flavor != PORT_FLAVOUR_PCI_VF {
+		return fmt.Errorf("unsupported port flavour for netdev %s", netdev)
+	}
+
+	physPortNameStr, err := getNetDevPhysPortName(netdev)
+	if err != nil {
+		return fmt.Errorf("failed to get phys_port_name for netdev %s: %v", netdev, err)
+	}
+	pfID, vfIndex, err := parsePortName(physPortNameStr)
+	if err != nil {
+		return fmt.Errorf("failed to get the pf and vf index for netdev %s "+
+			"with phys_port_name %s: %v", netdev, physPortNameStr, err)
+	}
+
+	uplinkPhysPortName := fmt.Sprintf("p%d", pfID)
+	uplinkNetdev, err := findNetdevWithPortNameCriteria(func(pname string) bool { return pname == uplinkPhysPortName })
+	if err != nil {
+		return fmt.Errorf("failed to find netdev for physical port name %s. %v", uplinkPhysPortName, err)
+	}
+	vfRepName := fmt.Sprintf("vf%d", vfIndex)
+	sysfsVfRepMacFile := filepath.Join(NetSysDir, uplinkNetdev, "smart_nic", vfRepName, "mac")
+	_, err = utilfs.Fs.Stat(sysfsVfRepMacFile)
+	if err != nil {
+		return fmt.Errorf("couldn't stat VF representor's sysfs file %s: %v", sysfsVfRepMacFile, err)
+	}
+	err = utilfs.Fs.WriteFile(sysfsVfRepMacFile, []byte(mac.String()), 0)
+	if err != nil {
+		return fmt.Errorf("failed to write the MAC address %s to VF reprentor %s",
+			mac.String(), sysfsVfRepMacFile)
+	}
+	return nil
+}
