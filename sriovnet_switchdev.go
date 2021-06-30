@@ -202,11 +202,11 @@ func GetVfRepresentorSmartNIC(pfID, vfIndex string) (string, error) {
 	// Note: no supoport for Multi-Chassis Smart-NICs
 	expectedPhysPortNames := map[string]interface{}{
 		fmt.Sprintf("pf%svf%s", pfID, vfIndex):   nil,
-		fmt.Sprintf("c0pf%svf%s", pfID, vfIndex): nil,
+		fmt.Sprintf("c1pf%svf%s", pfID, vfIndex): nil,
 	}
 
 	netdev, err := findNetdevWithPortNameCriteria(func(portName string) bool {
-		// if phys port name == pf<pfIndex>vf<vfIndex> or c0pf<pfIndex>vf<vfIndex> we have a match
+		// if phys port name == pf<pfIndex>vf<vfIndex> or c1pf<pfIndex>vf<vfIndex> we have a match
 		if _, ok := expectedPhysPortNames[portName]; ok {
 			return true
 		}
