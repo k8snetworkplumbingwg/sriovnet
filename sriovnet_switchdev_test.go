@@ -105,8 +105,8 @@ func setupRepresentorEnv(t *testing.T, vfPciAddress string, vfReps []*repContext
 	return teardown
 }
 
-// setupSmartNICConfigFileForPort sets the config file content for a specific smart-NIC port of a given uplink
-func setupSmartNICConfigFileForPort(t *testing.T, uplink, portName, fileContent string) {
+// setupDPUConfigFileForPort sets the config file content for a specific DPU port of a given uplink
+func setupDPUConfigFileForPort(t *testing.T, uplink, portName, fileContent string) {
 	// This method assumes FakeFs it already set up
 	assert.IsType(t, &utilfs.FakeFs{}, utilfs.Fs)
 
@@ -205,7 +205,7 @@ func TestGetUplinkRepresentorErrorMissingUplink(t *testing.T) {
 	assert.Contains(t, err.Error(), expectedError)
 }
 
-func TestGetVfRepresentorSmartNIC(t *testing.T) {
+func TestGetVfRepresentorDPU(t *testing.T) {
 	vfReps := []*repContext{
 		{
 			Name:         "eth0",
@@ -226,12 +226,12 @@ func TestGetVfRepresentorSmartNIC(t *testing.T) {
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
 
-	vfRep, err := GetVfRepresentorSmartNIC("0", "2")
+	vfRep, err := GetVfRepresentorDPU("0", "2")
 	assert.NoError(t, err)
 	assert.Equal(t, "eth2", vfRep)
 }
 
-func TestGetVfRepresentorSmartNICNoRep(t *testing.T) {
+func TestGetVfRepresentorDPUNoRep(t *testing.T) {
 	vfReps := []*repContext{
 		{
 			Name:         "eth0",
@@ -247,19 +247,19 @@ func TestGetVfRepresentorSmartNICNoRep(t *testing.T) {
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
 
-	vfRep, err := GetVfRepresentorSmartNIC("1", "2")
+	vfRep, err := GetVfRepresentorDPU("1", "2")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
 }
 
-func TestGetVfRepresentorSmartNICInvalidPfID(t *testing.T) {
-	vfRep, err := GetVfRepresentorSmartNIC("invalid", "2")
+func TestGetVfRepresentorDPUInvalidPfID(t *testing.T) {
+	vfRep, err := GetVfRepresentorDPU("invalid", "2")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
 }
 
-func TestGetVfRepresentorSmartNICInvalidVfIndex(t *testing.T) {
-	vfRep, err := GetVfRepresentorSmartNIC("1", "invalid")
+func TestGetVfRepresentorDPUInvalidVfIndex(t *testing.T) {
+	vfRep, err := GetVfRepresentorDPU("1", "invalid")
 	assert.Error(t, err)
 	assert.Equal(t, "", vfRep)
 }
@@ -375,7 +375,7 @@ MAC        : 0c:42:a1:de:cf:7c
 MaxTxRate  : 0
 State      : Follow
 `
-	setupSmartNICConfigFileForPort(t, "eth0", "pf", repConfigFile)
+	setupDPUConfigFileForPort(t, "eth0", "pf", repConfigFile)
 	// Run test
 	tcases := []struct {
 		netdev      string
