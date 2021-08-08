@@ -229,10 +229,10 @@ func TestIntegrationGetPfPciFromVfPci(t *testing.T) {
 func TestIntegrationGetVfRepresentorSmartNIC(t *testing.T) {
 	pfID := "0"
 	vfIdx := "2"
-	t.Log("GetVfRepresentorSmartNIC ", "PF ID: ", pfID, "VF Index: ", vfIdx)
-	rep, err := GetVfRepresentorSmartNIC(pfID, vfIdx)
+	t.Log("GetVfRepresentorDPU ", "PF ID: ", pfID, "VF Index: ", vfIdx)
+	rep, err := GetVfRepresentorDPU(pfID, vfIdx)
 	if err != nil {
-		t.Log("GetVfRepresentorSmartNIC ", "Error: ", err)
+		t.Log("GetVfRepresentorDPU ", "Error: ", err)
 		t.Fatal()
 	}
 	t.Log("VF Representor: ", rep)
