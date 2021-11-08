@@ -1,8 +1,10 @@
 package sriovnet
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -79,13 +81,18 @@ func isSwitchdev(netdevice string) bool {
 	return false
 }
 
-// GetUplinkRepresentor gets a VF PCI address (e.g '0000:03:00.4') and
-// returns the uplink represntor netdev name for that VF.
-func GetUplinkRepresentor(vfPciAddress string) (string, error) {
-	devicePath := filepath.Join(PciSysDir, vfPciAddress, "physfn", "net")
+// GetUplinkRepresentor gets a VF or PF PCI address (e.g '0000:03:00.4') and
+// returns the uplink represntor netdev name for that VF or PF.
+func GetUplinkRepresentor(pciAddress string) (string, error) {
+	devicePath := filepath.Join(PciSysDir, pciAddress, "physfn", "net")
+	if _, err := utilfs.Fs.Stat(devicePath); errors.Is(err, os.ErrNotExist) {
+		// If physfn symlink to the parent PF doesn't exist, use the current device's dir
+		devicePath = filepath.Join(PciSysDir, pciAddress, "net")
+	}
+
 	devices, err := utilfs.Fs.ReadDir(devicePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to lookup %s: %v", vfPciAddress, err)
+		return "", fmt.Errorf("failed to lookup %s: %v", pciAddress, err)
 	}
 	for _, device := range devices {
 		if isSwitchdev(device.Name()) {
@@ -100,7 +107,7 @@ func GetUplinkRepresentor(vfPciAddress string) (string, error) {
 			return device.Name(), nil
 		}
 	}
-	return "", fmt.Errorf("uplink for %s not found", vfPciAddress)
+	return "", fmt.Errorf("uplink for %s not found", pciAddress)
 }
 
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
