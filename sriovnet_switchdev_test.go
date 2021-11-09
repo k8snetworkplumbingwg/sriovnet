@@ -145,6 +145,21 @@ func TestGetUplinkRepresentorWithoutPhysPortNameSuccess(t *testing.T) {
 	assert.Equal(t, "eth0", uplinkNetdev)
 }
 
+func TestGetUplinkRepresentorForPfSuccess(t *testing.T) {
+	pfPciAddress := "0000:03:00.0"
+	uplinkRep := &repContext{"eth0", "p0", "111111"}
+
+	vfPciAddress := ""
+	var vfsReps []*repContext
+
+	teardown := setupUplinkRepresentorEnv(t, uplinkRep, vfPciAddress, vfsReps)
+	_ = utilfs.Fs.MkdirAll(filepath.Join(PciSysDir, pfPciAddress, "net", uplinkRep.Name), os.FileMode(0755))
+	defer teardown()
+	uplinkNetdev, err := GetUplinkRepresentor(pfPciAddress)
+	assert.NoError(t, err)
+	assert.Equal(t, "eth0", uplinkNetdev)
+}
+
 func TestGetUplinkRepresentorWithPhysPortNameFailed(t *testing.T) {
 	vfPciAddress := "0000:03:00.4"
 	uplinkRep := &repContext{"eth0", "invalid", "111111"}

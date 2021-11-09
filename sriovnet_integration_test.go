@@ -324,3 +324,29 @@ func TestIntegrationGetVfRepresentor(t *testing.T) {
 		t.Log("GetVfRepresentor", "uplink: ", tcase.uplink, " VF Index: ", tcase.vfIndex, " Rep: ", rep)
 	}
 }
+
+func TestIntegrationGetUplinkRepresentor(t *testing.T) {
+	uplink := "enp3s0f0np0"
+	pfPciAddress := "0000:03:00.0"
+	vfPciAddress := "0000:03:00.2"
+
+	rep, err := GetUplinkRepresentor(pfPciAddress)
+
+	if err != nil {
+		t.Fatal("GetUplinkRepresentor failed with error: ", err)
+	}
+
+	if rep != uplink {
+		t.Fatal("Actual Representor does not match expected Representor", rep, "!=", uplink)
+	}
+
+	rep, err := GetUplinkRepresentor(vfPciAddress)
+
+	if err != nil {
+		t.Fatal("GetUplinkRepresentor failed with error: ", err)
+	}
+
+	if rep != uplink {
+		t.Fatal("Actual Representor does not match expected Representor", rep, "!=", uplink)
+	}
+}
