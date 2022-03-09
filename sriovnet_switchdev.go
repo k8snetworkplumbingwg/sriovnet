@@ -44,6 +44,9 @@ var pfPortRepRegex = regexp.MustCompile(`^(?:c\d+)?pf(\d+)$`)
 // Regex that matches on VF representor port name
 var vfPortRepRegex = regexp.MustCompile(`^(?:c\d+)?pf(\d+)vf(\d+)$`)
 
+// Regex that matches on SF representor port name
+var sfPortRepRegex = regexp.MustCompile(`^(?:c\d+)?pf(\d+)sf(\d+)$`)
+
 func parsePortName(physPortName string) (pfRepIndex, vfRepIndex int, err error) {
 	pfRepIndex = -1
 	vfRepIndex = -1
@@ -67,6 +70,20 @@ func parsePortName(physPortName string) (pfRepIndex, vfRepIndex int, err error) 
 		}
 	}
 	return pfRepIndex, vfRepIndex, err
+}
+
+func parseSfPortName(physPortName string) (int, error) {
+	matches := sfPortRepRegex.FindStringSubmatch(physPortName)
+	//nolint:gomnd
+	if len(matches) != 3 {
+		return -1, fmt.Errorf("failed to parse physPortName %s", physPortName)
+	}
+
+	sfRepIndex, err := strconv.Atoi(matches[2])
+	if err != nil {
+		return -1, err
+	}
+	return sfRepIndex, err
 }
 
 func isSwitchdev(netdevice string) bool {
@@ -110,6 +127,17 @@ func GetUplinkRepresentor(pciAddress string) (string, error) {
 	return "", fmt.Errorf("uplink for %s not found", pciAddress)
 }
 
+// GetUplinkRepresentorFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
+// returns the uplink representor netdev name for device.
+func GetUplinkRepresentorFromAux(auxDev string) (string, error) {
+	pfPci, err := GetPfPciFromAux(auxDev)
+	if err != nil {
+		return "", fmt.Errorf("failed to find uplink PCI device: %v", err)
+	}
+
+	return GetUplinkRepresentor(pfPci)
+}
+
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 	swIDFile := filepath.Join(NetSysDir, uplink, netdevPhysSwitchID)
 	physSwitchID, err := utilfs.Fs.ReadFile(swIDFile)
@@ -150,6 +178,29 @@ func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("failed to find VF representor for uplink %s", uplink)
+}
+
+func GetSfRepresentor(uplink string, sfnum int) (string, error) {
+	pfNetPath := filepath.Join(NetSysDir, uplink, "device", "net")
+	devices, err := utilfs.Fs.ReadDir(pfNetPath)
+	if err != nil {
+		return "", err
+	}
+
+	for _, device := range devices {
+		physPortNameStr, err := getNetDevPhysPortName(device.Name())
+		if err != nil {
+			continue
+		}
+		sfRepIndex, _ := parseSfPortName(physPortNameStr)
+		if err != nil {
+			continue
+		}
+		if sfRepIndex == sfnum {
+			return device.Name(), nil
+		}
+	}
+	return "", fmt.Errorf("failed to find SF representor for uplink %s", uplink)
 }
 
 func getNetDevPhysPortName(netDev string) (string, error) {
@@ -206,7 +257,7 @@ func GetVfRepresentorDPU(pfID, vfIndex string) (string, error) {
 	}
 
 	// map for easy search of expected VF rep port name.
-	// Note: no supoport for Multi-Chassis DPUs
+	// Note: no support for Multi-Chassis DPUs
 	expectedPhysPortNames := map[string]interface{}{
 		fmt.Sprintf("pf%svf%s", pfID, vfIndex):   nil,
 		fmt.Sprintf("c1pf%svf%s", pfID, vfIndex): nil,
@@ -222,6 +273,39 @@ func GetVfRepresentorDPU(pfID, vfIndex string) (string, error) {
 
 	if err != nil {
 		return "", fmt.Errorf("vf representor for pfID:%s, vfIndex:%s not found", pfID, vfIndex)
+	}
+	return netdev, nil
+}
+
+// GetSfRepresentorDPU returns SF representor on DPU for a host SF identified by pfID and sfIndex
+func GetSfRepresentorDPU(pfID, sfIndex string) (string, error) {
+	// pfID should be 0 or 1
+	if pfID != "0" && pfID != "1" {
+		return "", fmt.Errorf("unexpected pfID(%s). It should be 0 or 1", pfID)
+	}
+
+	// sfIndex should be an unsinged integer provided as a decimal number
+	if _, err := strconv.ParseUint(sfIndex, 10, 32); err != nil {
+		return "", fmt.Errorf("unexpected sfIndex(%s). It should be an unsigned decimal number", sfIndex)
+	}
+
+	// map for easy search of expected VF rep port name.
+	// Note: no support for Multi-Chassis DPUs
+	expectedPhysPortNames := map[string]interface{}{
+		fmt.Sprintf("pf%ssf%s", pfID, sfIndex):   nil,
+		fmt.Sprintf("c1pf%ssf%s", pfID, sfIndex): nil,
+	}
+
+	netdev, err := findNetdevWithPortNameCriteria(func(portName string) bool {
+		// if phys port name == pf<pfIndex>sf<sfIndex> or c1pf<pfIndex>sf<sfIndex> we have a match
+		if _, ok := expectedPhysPortNames[portName]; ok {
+			return true
+		}
+		return false
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("sf representor for pfID:%s, sfIndex:%s not found", pfID, sfIndex)
 	}
 	return netdev, nil
 }
