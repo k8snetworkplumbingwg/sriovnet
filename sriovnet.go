@@ -24,7 +24,10 @@ const (
 	ibEncapType    = "infiniband"
 )
 
-var virtFnRe = regexp.MustCompile(`virtfn(\d+)`)
+var (
+	virtFnRe     = regexp.MustCompile(`virtfn(\d+)`)
+	pciAddressRe = regexp.MustCompile(`^[0-9a-f]{4}:[0-9a-f]{2}:[01][0-9a-f].[0-7]$`)
+)
 
 type VfObj struct {
 	Index      int
@@ -444,75 +447,9 @@ func GetPfPciFromVfPci(vfPciAddress string) (string, error) {
 	return pf, err
 }
 
-func getNetDevicesFromPath(dir string) ([]string, error) {
-	_, err := utilfs.Fs.Stat(dir)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get network devices from path %s: %v", dir, err)
-	}
-
-	netDevicesFiles, err := utilfs.Fs.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get network devices name in %s: %v", dir, err)
-	}
-
-	netDevices := make([]string, 0, len(netDevicesFiles))
-	for _, netDeviceFile := range netDevicesFiles {
-		netDevices = append(netDevices, strings.TrimSpace(netDeviceFile.Name()))
-	}
-	return netDevices, nil
-}
-
-// GetNetDeviceFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
-// returns the correlate netdevice
-func GetNetDevicesFromAux(auxDev string) ([]string, error) {
-	auxDir := filepath.Join(AuxSysDir, auxDev, "net")
-	return getNetDevicesFromPath(auxDir)
-}
-
 // GetNetDevicesFromPci gets a PCI address (e.g '0000:03:00.1') and
 // returns the correlate list of netdevices
 func GetNetDevicesFromPci(pciAddress string) ([]string, error) {
 	pciDir := filepath.Join(PciSysDir, pciAddress, "net")
-	return getNetDevicesFromPath(pciDir)
-}
-
-// GetSfIndexByAuxDev gets a SF device name (e.g 'mlx5_core.sf.2') and
-// returns the correlate SF index.
-func GetSfIndexByAuxDev(auxDev string) (int, error) {
-	sfnumFile := filepath.Join(AuxSysDir, auxDev, "sfnum")
-	if _, err := utilfs.Fs.Stat(sfnumFile); err != nil {
-		return -1, fmt.Errorf("cannot get sfnum for %s device: %v", auxDev, err)
-	}
-
-	sfnumStr, err := utilfs.Fs.ReadFile(sfnumFile)
-	if err != nil {
-		return -1, fmt.Errorf("cannot read sfnum file for %s device: %v", auxDev, err)
-	}
-
-	sfnum, err := strconv.Atoi(string(sfnumStr))
-	if err != nil {
-		return -1, err
-	}
-	return sfnum, nil
-}
-
-// GetPfPciFromAux retrieves the parent PF PCI address of the provided auxiliary device in D.T.f format
-func GetPfPciFromAux(auxDev string) (string, error) {
-	auxPath := filepath.Join(AuxSysDir, auxDev)
-	absoluteAuxPath, err := utilfs.Fs.Readlink(auxPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read auxiliary link, provided device ID may be not auxiliary device. %v", err)
-	}
-
-	parent := filepath.Dir(absoluteAuxPath)
-	pf := filepath.Base(parent)
-	if pf != "" && pf[0:4] != "0000" { // XXX regexp??
-		// it's a nested auxiliary device. repeat
-		parent = filepath.Dir(parent)
-		pf = filepath.Base(parent)
-	}
-	if pf == "" {
-		return pf, fmt.Errorf("could not find PF PCI Address")
-	}
-	return pf, err
+	return getFileNamesFromPath(pciDir)
 }

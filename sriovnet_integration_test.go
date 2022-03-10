@@ -325,6 +325,36 @@ func TestIntegrationGetVfRepresentor(t *testing.T) {
 	}
 }
 
+func TestIntegrationGetSfRepresentor(t *testing.T) {
+	tcases := []struct {
+		uplink     string
+		sfNum      int
+		expected   string
+		shouldFail bool
+	}{
+		{uplink: "p0", sfNum: 2, expected: "en3f0pf0sf2", shouldFail: false},
+		{uplink: "foobar", sfNum: 2, expected: "", shouldFail: true},
+		{uplink: "enp3s0", sfNum: 44, expected: "", shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		sfRep, err := GetSfRepresentor(tcase.uplink, tcase.sfNum)
+		if tcase.shouldFail {
+			if err == nil {
+				t.Fatal("Expected failure but no error occured")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal("GetSfRepresentor failed with error: ", err)
+		}
+		if sfRep != tcase.expected {
+			t.Fatal("Actual Representor does not match expected Representor", sfRep, "!=", tcase.expected)
+		}
+		t.Log("GetSfRepresentor", "uplink: ", tcase.uplink, " SF Index: ", tcase.sfNum, " Rep: ", sfRep)
+	}
+}
+
 func TestIntegrationGetUplinkRepresentor(t *testing.T) {
 	uplink := "enp3s0f0np0"
 	pfPciAddress := "0000:03:00.0"
@@ -340,7 +370,7 @@ func TestIntegrationGetUplinkRepresentor(t *testing.T) {
 		t.Fatal("Actual Representor does not match expected Representor", rep, "!=", uplink)
 	}
 
-	rep, err := GetUplinkRepresentor(vfPciAddress)
+	rep, err = GetUplinkRepresentor(vfPciAddress)
 
 	if err != nil {
 		t.Fatal("GetUplinkRepresentor failed with error: ", err)
