@@ -22,6 +22,33 @@ type repContext struct {
 	PhysSwitchID string // conditionally create if string is empty under /sys/class/net/<Name>/phys_switch_id
 }
 
+// setUpRepPhysFiles sets up phys_port_name and phys_switch_id files for specified representor
+// Note: should not be called directly as it expects FakeFs and representor
+// path to be initialized beforehand.
+func setUpRepPhysFiles(rep *repContext) error {
+	var err error
+
+	if rep.PhysPortName != "" {
+		physPortNamePath := filepath.Join(NetSysDir, rep.Name, netdevPhysPortName)
+		physPortNameFile, _ := utilfs.Fs.Create(physPortNamePath)
+		_, err = physPortNameFile.Write([]byte(rep.PhysPortName))
+		if err != nil {
+			return err
+		}
+	}
+
+	if rep.PhysSwitchID != "" {
+		physSwitchIDPath := filepath.Join(NetSysDir, rep.Name, netdevPhysSwitchID)
+		physSwitchIDFile, _ := utilfs.Fs.Create(physSwitchIDPath)
+		_, err = physSwitchIDFile.Write([]byte(rep.PhysSwitchID))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // setUpRepresentorLayout sets up the representor filesystem layout.
 // Note: should not be called directly as it expects FakeFs to be initialized beforehand.
 func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
@@ -45,25 +72,7 @@ func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
 		return err
 	}
 
-	if rep.PhysPortName != "" {
-		physPortNamePath := filepath.Join(NetSysDir, rep.Name, netdevPhysPortName)
-		physPortNameFile, _ := utilfs.Fs.Create(physPortNamePath)
-		_, err = physPortNameFile.Write([]byte(rep.PhysPortName))
-		if err != nil {
-			return err
-		}
-	}
-
-	if rep.PhysSwitchID != "" {
-		physSwitchIDPath := filepath.Join(NetSysDir, rep.Name, netdevPhysSwitchID)
-		physSwitchIDFile, _ := utilfs.Fs.Create(physSwitchIDPath)
-		_, err = physSwitchIDFile.Write([]byte(rep.PhysSwitchID))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return setUpRepPhysFiles(rep)
 }
 
 //nolint:unparam
@@ -244,6 +253,103 @@ func TestGetVfRepresentorDPU(t *testing.T) {
 	vfRep, err := GetVfRepresentorDPU("0", "2")
 	assert.NoError(t, err)
 	assert.Equal(t, "eth2", vfRep)
+}
+
+func setupSfRepresentorEnv(t *testing.T, sfReps []*repContext) func() {
+	var err error
+	teardown := setupFakeFs(t)
+
+	defer func() {
+		if err != nil {
+			teardown()
+			t.Errorf("setupSfRepresentorEnv, got %v", err)
+		}
+	}()
+
+	pfNetPath := filepath.Join(NetSysDir, "p0", "device", "net")
+	err = utilfs.Fs.MkdirAll(pfNetPath, os.FileMode(0755))
+	if err != nil {
+		return nil
+	}
+	for _, rep := range sfReps {
+		repPath := filepath.Join(pfNetPath, rep.Name)
+		repLink := filepath.Join(NetSysDir, rep.Name)
+
+		err = utilfs.Fs.MkdirAll(repPath, os.FileMode(0755))
+		if err != nil {
+			break
+		}
+
+		_ = utilfs.Fs.Symlink(repPath, repLink)
+		if err = setUpRepPhysFiles(rep); err != nil {
+			break
+		}
+	}
+
+	return teardown
+}
+
+func TestGetSfRepresentorSuccess(t *testing.T) {
+	sfReps := []*repContext{
+		{
+			Name:         "eth0",
+			PhysPortName: "pf0sf0",
+		},
+		{
+			Name:         "eth1",
+			PhysPortName: "pf0sf1",
+		},
+		{
+			Name:         "eth2",
+			PhysPortName: "pf0sf2",
+		},
+	}
+	teardown := setupSfRepresentorEnv(t, sfReps)
+	defer teardown()
+
+	sfRep, err := GetSfRepresentor("p0", 2)
+	assert.NoError(t, err)
+	assert.Equal(t, "eth2", sfRep)
+}
+
+func TestGetSfRepresentorErrorNoRep(t *testing.T) {
+	sfReps := []*repContext{
+		{
+			Name:         "eth0",
+			PhysPortName: "pf0sf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth1",
+			PhysPortName: "pf0sf1",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth2",
+			PhysPortName: "pf0sf2",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+	}
+	teardown := setupSfRepresentorEnv(t, sfReps)
+	expectedError := "failed to find SF representor for uplink p0"
+	defer teardown()
+
+	sfRep, err := GetSfRepresentor("p0", 3)
+	assert.Error(t, err)
+	assert.Equal(t, "", sfRep)
+	assert.Contains(t, err.Error(), expectedError)
+}
+
+func TestGetSfRepresentorErrorNotExistingUplink(t *testing.T) {
+	sfReps := []*repContext{}
+	teardown := setupSfRepresentorEnv(t, sfReps)
+	expectedError := "no such file or directory"
+	defer teardown()
+
+	sfRep, err := GetSfRepresentor("p1", 0)
+	assert.Error(t, err)
+	assert.Equal(t, "", sfRep)
+	assert.Contains(t, err.Error(), expectedError)
 }
 
 func TestGetVfRepresentorDPUNoRep(t *testing.T) {
