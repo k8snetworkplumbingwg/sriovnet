@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
 )
@@ -47,7 +48,7 @@ func GetSfIndexByAuxDev(auxDev string) (int, error) {
 		return -1, fmt.Errorf("cannot read sfnum file for %s device: %v", auxDev, err)
 	}
 
-	sfnum, err := strconv.Atoi(string(sfNumStr))
+	sfnum, err := strconv.Atoi(strings.TrimSpace(string(sfNumStr)))
 	if err != nil {
 		return -1, err
 	}
