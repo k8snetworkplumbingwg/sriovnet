@@ -352,6 +352,68 @@ func TestGetSfRepresentorErrorNotExistingUplink(t *testing.T) {
 	assert.Contains(t, err.Error(), expectedError)
 }
 
+func TestGetPortIndexFromRepresentor(t *testing.T) {
+	vfReps := []*repContext{
+		{
+			Name:         "p0",
+			PhysPortName: "p0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "pf0hpf",
+			PhysPortName: "pf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "pf0vf10",
+			PhysPortName: "pf0vf10",
+			PhysSwitchID: "fc10d80003a1420c",
+		},
+		{
+			Name:         "pf0sf50",
+			PhysPortName: "pf0sf50",
+			PhysSwitchID: "fc10d80003a1420c",
+		},
+		{
+			Name:         "eth3",
+			PhysPortName: "",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "noswitchdev",
+			PhysPortName: "",
+			PhysSwitchID: "",
+		},
+	}
+	teardown := setupRepresentorEnv(t, "", vfReps)
+	defer teardown()
+
+	tcases := []struct {
+		netdev        string
+		expectedID    int
+		expectedError string
+		shouldFail    bool
+	}{
+		{netdev: "pf0vf10", expectedID: 10, expectedError: "", shouldFail: false},
+		{netdev: "pf0sf50", expectedID: 50, expectedError: "", shouldFail: false},
+		{netdev: "p0", expectedID: 0, expectedError: "unsupported port flavor", shouldFail: true},
+		{netdev: "pf0hpf", expectedID: 0, expectedError: "unsupported port flavor", shouldFail: true},
+		{netdev: "eth3", expectedID: 0, expectedError: "no such file or directory", shouldFail: true},
+		{netdev: "notswitchdev", expectedID: 0, expectedError: "does not represent an eswitch port", shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		portID, err := GetPortIndexFromRepresentor(tcase.netdev)
+		if tcase.shouldFail {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tcase.expectedError)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, portID, tcase.expectedID)
+		}
+	}
+}
+
 func TestGetVfRepresentorDPUNoRep(t *testing.T) {
 	vfReps := []*repContext{
 		{

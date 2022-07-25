@@ -154,3 +154,65 @@ func TestIsVfPciVfioBoundFalse(t *testing.T) {
 	vfioDevice := IsVfPciVfioBound(pciAddr)
 	assert.Equal(t, false, vfioDevice)
 }
+
+type devContext struct {
+	Name    string
+	PciAddr string
+}
+
+func setupGetPciFromNetDeviceEnv(t *testing.T, devices []*devContext) func() {
+	var err error
+	teardown := setupFakeFs(t)
+	err = utilfs.Fs.MkdirAll(NetSysDir, os.FileMode(0755))
+	defer func() {
+		if err != nil {
+			teardown()
+			t.Errorf("setupGetPciFromNetDeviceEnv: got %v", err)
+		}
+	}()
+	for _, dev := range devices {
+		var symlinkTarget string
+		symlinkName := filepath.Join(NetSysDir, dev.Name)
+		if dev.PciAddr != "" {
+			symlinkTarget = filepath.Join("/sys/devices/pci0000:00",
+				dev.PciAddr, "net", dev.Name)
+		} else {
+			symlinkTarget = filepath.Join("/sys/devices/virtual/net", dev.Name)
+		}
+		err = utilfs.Fs.MkdirAll(symlinkTarget, os.FileMode(0755))
+		if err != nil {
+			return teardown
+		}
+		err = utilfs.Fs.Symlink(symlinkTarget, symlinkName)
+		if err != nil {
+			return teardown
+		}
+	}
+	return teardown
+}
+
+func TestGetPciFromNetDevice(t *testing.T) {
+	devices := []*devContext{
+		{"p0", "0000:03:00.0"},
+		{"pf0vf0", "0000:03:00.2"},
+		{"pf0vf4", "0000:03:00.3"},
+	}
+	teardown := setupGetPciFromNetDeviceEnv(t, devices)
+	defer teardown()
+
+	pci, err := GetPciFromNetDevice(devices[0].Name)
+	assert.NoError(t, err)
+	assert.Equal(t, devices[0].PciAddr, pci)
+}
+
+func TestGetPciFromNetDeviceNotPCI(t *testing.T) {
+	devices := []*devContext{
+		{"br0", ""},
+	}
+	teardown := setupGetPciFromNetDeviceEnv(t, devices)
+	defer teardown()
+
+	_, err := GetPciFromNetDevice(devices[0].Name)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "is not a PCI device")
+}
