@@ -287,6 +287,7 @@ func GetRepresentorPortFlavour(netdev string) (PortFlavour, error) {
 		PORT_FLAVOUR_PHYSICAL: physPortRepRegex,
 		PORT_FLAVOUR_PCI_PF:   pfPortRepRegex,
 		PORT_FLAVOUR_PCI_VF:   vfPortRepRegex,
+		PORT_FLAVOUR_PCI_SF:   sfPortRepRegex,
 	}
 	for flavour, regex := range typeToRegex {
 		if regex.MatchString(portName) {

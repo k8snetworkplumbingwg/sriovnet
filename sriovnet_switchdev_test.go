@@ -407,6 +407,11 @@ func TestGetVfRepresentorPortFlavour(t *testing.T) {
 			PhysPortName: "pf0sf44",
 			PhysSwitchID: "c2cfc60003a1420c",
 		},
+		{
+			Name:         "eth10",
+			PhysPortName: "unknown",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
 	}
 	teardown := setupRepresentorEnv(t, "", vfReps)
 	defer teardown()
@@ -419,7 +424,8 @@ func TestGetVfRepresentorPortFlavour(t *testing.T) {
 		{netdev: "eth0", expected: PORT_FLAVOUR_PHYSICAL, shouldFail: false},
 		{netdev: "eth1", expected: PORT_FLAVOUR_PCI_PF, shouldFail: false},
 		{netdev: "eth2", expected: PORT_FLAVOUR_PCI_VF, shouldFail: false},
-		{netdev: "eth44", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: false},
+		{netdev: "eth44", expected: PORT_FLAVOUR_PCI_SF, shouldFail: false},
+		{netdev: "eth10", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: false},
 		{netdev: "foobar", expected: PORT_FLAVOUR_UNKNOWN, shouldFail: true},
 	}
 
