@@ -226,6 +226,38 @@ func findNetdevWithPortNameCriteria(criteria func(string) bool) (string, error) 
 	return "", fmt.Errorf("no representor matched criteria")
 }
 
+// GetPortIndexFromRepresentor finds the index of a representor from its network device name.
+// Supports VF and SF. For multiple port flavors, the same ID could be returned, i.e.
+//   pf0vf10 and pf0sf10
+// will return the same port ID. To further differentiate the ports, use GetRepresentorPortFlavour
+func GetPortIndexFromRepresentor(repNetDev string) (int, error) {
+	flavor, err := GetRepresentorPortFlavour(repNetDev)
+	if err != nil {
+		return 0, err
+	}
+
+	if flavor != PORT_FLAVOUR_PCI_VF && flavor != PORT_FLAVOUR_PCI_SF {
+		return 0, fmt.Errorf("unsupported port flavor for netdev %s", repNetDev)
+	}
+
+	physPortName, err := getNetDevPhysPortName(repNetDev)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get device %s physical port name: %v", repNetDev, err)
+	}
+
+	typeToRegex := map[PortFlavour]*regexp.Regexp{
+		PORT_FLAVOUR_PCI_VF: vfPortRepRegex,
+		PORT_FLAVOUR_PCI_SF: sfPortRepRegex,
+	}
+
+	_, repIndex, err := parseIndexFromPhysPortName(physPortName, typeToRegex[flavor])
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse the physical port name of device %s: %v", repNetDev, err)
+	}
+
+	return repIndex, nil
+}
+
 // GetVfRepresentorDPU returns VF representor on DPU for a host VF identified by pfID and vfIndex
 func GetVfRepresentorDPU(pfID, vfIndex string) (string, error) {
 	// TODO(Adrianc): This method should change to get switchID and vfIndex as input, then common logic can
