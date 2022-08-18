@@ -238,6 +238,18 @@ func TestIntegrationGetVfRepresentorSmartNIC(t *testing.T) {
 	t.Log("VF Representor: ", rep)
 }
 
+func TestIntegrationGetSfRepresentorSmartNIC(t *testing.T) {
+	pfID := "0"
+	sfIdx := "1"
+	t.Log("GetSfRepresentorDPU ", "PF ID: ", pfID, "SF Index: ", sfIdx)
+	rep, err := GetSfRepresentorDPU(pfID, sfIdx)
+	if err != nil {
+		t.Log("GetSfRepresentorDPU ", "Error: ", err)
+		t.Fatal()
+	}
+	t.Log("SF Representor: ", rep)
+}
+
 func TestIntegrationGetRepresentorPortFlavour(t *testing.T) {
 	tcases := []struct {
 		netdev          string

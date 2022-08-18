@@ -447,6 +447,56 @@ func TestGetVfRepresentorDPUInvalidVfIndex(t *testing.T) {
 	assert.Equal(t, "", vfRep)
 }
 
+func TestGetSfRepresentorDPUSuccess(t *testing.T) {
+	sfReps := []*repContext{
+		{
+			Name:         "eth0",
+			PhysPortName: "pf1sf0",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth1",
+			PhysPortName: "pf1sf1",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+		{
+			Name:         "eth2",
+			PhysPortName: "pf1sf2",
+			PhysSwitchID: "c2cfc60003a1420c",
+		},
+	}
+	teardown := setupSfRepresentorEnv(t, sfReps)
+	defer teardown()
+	sfRep, err := GetSfRepresentorDPU("1", "1")
+	assert.NoError(t, err)
+	assert.Equal(t, "eth1", sfRep)
+}
+
+func TestGetSfRepresentorDPUErrorNoRep(t *testing.T) {
+	sfReps := []*repContext{
+		{PhysPortName: "pf1sf0"},
+		{PhysPortName: "pf1sf1"},
+	}
+	teardown := setupSfRepresentorEnv(t, sfReps)
+	defer teardown()
+
+	sfRep, err := GetSfRepresentorDPU("1", "2")
+	assert.Error(t, err)
+	assert.Equal(t, "", sfRep)
+}
+
+func TestGetSfRepresentorDPUErrorInvalidPfID(t *testing.T) {
+	sfRep, err := GetSfRepresentorDPU("invalid", "3")
+	assert.Error(t, err)
+	assert.Equal(t, "", sfRep)
+}
+
+func TestGetSfRepresentorDPUErrorInvalidSfIndex(t *testing.T) {
+	sfRep, err := GetSfRepresentorDPU("1", "invalid")
+	assert.Error(t, err)
+	assert.Equal(t, "", sfRep)
+}
+
 func TestGetVfRepresentorPortFlavour(t *testing.T) {
 	vfReps := []*repContext{
 		{
