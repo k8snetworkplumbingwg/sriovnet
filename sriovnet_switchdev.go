@@ -294,6 +294,39 @@ func GetVfRepresentorDPU(pfID, vfIndex string) (string, error) {
 	return netdev, nil
 }
 
+// GetSfRepresentorDPU returns SF representor on DPU for a host SF identified by pfID and sfIndex
+func GetSfRepresentorDPU(pfID, sfIndex string) (string, error) {
+	// pfID should be 0 or 1
+	if pfID != "0" && pfID != "1" {
+		return "", fmt.Errorf("unexpected pfID(%s). It should be 0 or 1", pfID)
+	}
+
+	// sfIndex should be an unsinged integer provided as a decimal number
+	if _, err := strconv.ParseUint(sfIndex, 10, 32); err != nil {
+		return "", fmt.Errorf("unexpected sfIndex(%s). It should be an unsigned decimal number", sfIndex)
+	}
+
+	// map for easy search of expected VF rep port name.
+	// Note: no support for Multi-Chassis DPUs
+	expectedPhysPortNames := map[string]interface{}{
+		fmt.Sprintf("pf%ssf%s", pfID, sfIndex):   nil,
+		fmt.Sprintf("c1pf%ssf%s", pfID, sfIndex): nil,
+	}
+
+	netdev, err := findNetdevWithPortNameCriteria(func(portName string) bool {
+		// if phys port name == pf<pfIndex>sf<sfIndex> or c1pf<pfIndex>sf<sfIndex> we have a match
+		if _, ok := expectedPhysPortNames[portName]; ok {
+			return true
+		}
+		return false
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("sf representor for pfID:%s, sfIndex:%s not found", pfID, sfIndex)
+	}
+	return netdev, nil
+}
+
 // GetRepresentorPortFlavour returns the representor port flavour
 // Note: this method does not support old representor names used by old kernels
 // e.g <vf_num> and will return PORT_FLAVOUR_UNKNOWN for such cases.
