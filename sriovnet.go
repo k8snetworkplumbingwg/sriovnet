@@ -14,8 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/vishvananda/netlink"
 
-	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
-	"github.com/Mellanox/sriovnet/pkg/utils/netlinkops"
+	utilfs "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/filesystem"
+	"github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/netlinkops"
 )
 
 const (
