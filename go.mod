@@ -1,4 +1,4 @@
-module github.com/Mellanox/sriovnet
+module github.com/k8snetworkplumbingwg/sriovnet
 
 go 1.18
 
