@@ -11,7 +11,7 @@ GCOV2LCOV := $(BIN_DIR)/gcov2lcov
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
-GOLANGCI_LINT_VER := v1.39.0
+GOLANGCI_LINT_VER := v1.49.0
 
 Q = $(if $(filter 1,$V),,@)
 

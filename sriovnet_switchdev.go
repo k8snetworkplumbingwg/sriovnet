@@ -1,6 +1,7 @@
 package sriovnet
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -22,7 +23,7 @@ const (
 type PortFlavour uint16
 
 // Keep things consistent with netlink lib constants
-// nolint:golint,stylecheck
+// nolint:revive,stylecheck
 const (
 	PORT_FLAVOUR_PHYSICAL = iota
 	PORT_FLAVOUR_CPU
@@ -88,7 +89,7 @@ func isSwitchdev(netdevice string) bool {
 	if err != nil {
 		return false
 	}
-	if physSwitchID != nil && string(physSwitchID) != "" {
+	if len(physSwitchID) != 0 {
 		return true
 	}
 	return false
@@ -126,7 +127,7 @@ func GetUplinkRepresentor(pciAddress string) (string, error) {
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 	swIDFile := filepath.Join(NetSysDir, uplink, netdevPhysSwitchID)
 	physSwitchID, err := utilfs.Fs.ReadFile(swIDFile)
-	if err != nil || string(physSwitchID) == "" {
+	if err != nil || len(physSwitchID) == 0 {
 		return "", fmt.Errorf("cant get uplink %s switch id", uplink)
 	}
 
@@ -139,7 +140,7 @@ func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 		devicePath := filepath.Join(NetSysDir, device.Name())
 		deviceSwIDFile := filepath.Join(devicePath, netdevPhysSwitchID)
 		deviceSwID, err := utilfs.Fs.ReadFile(deviceSwIDFile)
-		if err != nil || string(deviceSwID) != string(physSwitchID) {
+		if err != nil || !bytes.Equal(deviceSwID, physSwitchID) {
 			continue
 		}
 		physPortNameStr, err := getNetDevPhysPortName(device.Name())
@@ -228,7 +229,9 @@ func findNetdevWithPortNameCriteria(criteria func(string) bool) (string, error) 
 
 // GetPortIndexFromRepresentor finds the index of a representor from its network device name.
 // Supports VF and SF. For multiple port flavors, the same ID could be returned, i.e.
-//   pf0vf10 and pf0sf10
+//
+//	pf0vf10 and pf0sf10
+//
 // will return the same port ID. To further differentiate the ports, use GetRepresentorPortFlavour
 func GetPortIndexFromRepresentor(repNetDev string) (int, error) {
 	flavor, err := GetRepresentorPortFlavour(repNetDev)
@@ -366,9 +369,11 @@ func GetRepresentorPortFlavour(netdev string) (PortFlavour, error) {
 // representor port. The format of the file is a set of <key>:<value> pairs as follows:
 //
 // ```
-//  MAC        : 0c:42:a1:c6:cf:7c
-//  MaxTxRate  : 0
-//  State      : Follow
+//
+//	MAC        : 0c:42:a1:c6:cf:7c
+//	MaxTxRate  : 0
+//	State      : Follow
+//
 // ```
 func parseDPUConfigFileOutput(out string) map[string]string {
 	configMap := make(map[string]string)
@@ -386,8 +391,9 @@ func parseDPUConfigFileOutput(out string) map[string]string {
 // GetRepresentorPeerMacAddress returns the MAC address of the peer netdev associated with the given
 // representor netdev
 // Note:
-//    This method functionality is currently supported only on DPUs.
-//    Currently only netdev representors with PORT_FLAVOUR_PCI_PF are supported
+//
+//	This method functionality is currently supported only on DPUs.
+//	Currently only netdev representors with PORT_FLAVOUR_PCI_PF are supported
 func GetRepresentorPeerMacAddress(netdev string) (net.HardwareAddr, error) {
 	flavor, err := GetRepresentorPortFlavour(netdev)
 	if err != nil {
