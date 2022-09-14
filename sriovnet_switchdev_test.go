@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/vishvananda/netlink"
 
-	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
-	"github.com/Mellanox/sriovnet/pkg/utils/netlinkops"
-	netlinkopsMocks "github.com/Mellanox/sriovnet/pkg/utils/netlinkops/mocks"
+	utilfs "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/filesystem"
+	"github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/netlinkops"
+	netlinkopsMocks "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/netlinkops/mocks"
 )
 
 type repContext struct {
@@ -75,8 +75,9 @@ func setUpRepresentorLayout(vfPciAddress string, rep *repContext) error {
 	return setUpRepPhysFiles(rep)
 }
 
-//nolint:unparam
 // setupUplinkRepresentorEnv sets up the uplink representor and related VF representors filesystem layout.
+//
+//nolint:unparam
 func setupUplinkRepresentorEnv(t *testing.T, uplink *repContext, vfPciAddress string, vfReps []*repContext) func() {
 	var err error
 	teardown := setupRepresentorEnv(t, vfPciAddress, vfReps)

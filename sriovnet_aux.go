@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	utilfs "github.com/Mellanox/sriovnet/pkg/utils/filesystem"
+	utilfs "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/filesystem"
 )
 
 // GetNetDeviceFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
