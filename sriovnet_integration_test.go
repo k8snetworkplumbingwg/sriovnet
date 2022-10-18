@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 /*
@@ -390,5 +391,47 @@ func TestIntegrationGetUplinkRepresentor(t *testing.T) {
 
 	if rep != uplink {
 		t.Fatal("Actual Representor does not match expected Representor", rep, "!=", uplink)
+	}
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestIntegrationGetAuxNetDevicesFromPci(t *testing.T) {
+	tcases := []struct {
+		addr       string
+		expected   []string
+		shouldFail bool
+	}{
+		{addr: "0000:3b:00.0", expected: []string{"mlx5_core.eth.0", "mlx5_core.rdma.0"}, shouldFail: false},
+		{addr: "0000:01:00.0", expected: []string{}, shouldFail: false},
+		{addr: "0000:00:00.0", expected: []string(nil), shouldFail: true},
+		{addr: "c0fe:00:00.0", expected: []string(nil), shouldFail: true},
+	}
+
+	for _, tcase := range tcases {
+		devs, err := GetAuxNetDevicesFromPci(tcase.addr)
+		if tcase.shouldFail {
+			if err == nil {
+				t.Fatal("Expected failure but no error occured")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal("GetAuxNetDevicesFromPci failed with error: ", err)
+		}
+		if !stringSlicesEqual(devs, tcase.expected) {
+			t.Fatal("Actual devices does not match expected devices list", devs, "!=", tcase.expected)
+		}
+		t.Log("GetAuxNetDevicesFromPci", "PCI address: ", tcase.addr, " Devices: ", devs)
 	}
 }

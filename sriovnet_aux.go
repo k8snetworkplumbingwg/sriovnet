@@ -87,3 +87,25 @@ func GetUplinkRepresentorFromAux(auxDev string) (string, error) {
 
 	return GetUplinkRepresentor(pfPci)
 }
+
+// GetAuxNetDevicesFromPci returns a list of auxiliary devices names for the specified PCI network device
+func GetAuxNetDevicesFromPci(pciAddr string) ([]string, error) {
+	baseDev := filepath.Join(PciSysDir, pciAddr)
+	// ensure that "net" folder exists, meaning it is network PCI device
+	if _, err := utilfs.Fs.Stat(filepath.Join(baseDev, "net")); err != nil {
+		return nil, err
+	}
+
+	files, err := utilfs.Fs.ReadDir(baseDev)
+	if err != nil {
+		return nil, err
+	}
+
+	auxDevs := make([]string, 0)
+	for _, file := range files {
+		if auxiliaryDeviceRe.MatchString(file.Name()) {
+			auxDevs = append(auxDevs, file.Name())
+		}
+	}
+	return auxDevs, nil
+}

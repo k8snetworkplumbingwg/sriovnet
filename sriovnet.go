@@ -25,8 +25,9 @@ const (
 )
 
 var (
-	virtFnRe     = regexp.MustCompile(`virtfn(\d+)`)
-	pciAddressRe = regexp.MustCompile(`^[0-9a-f]{4}:[0-9a-f]{2}:[01][0-9a-f].[0-7]$`)
+	virtFnRe          = regexp.MustCompile(`virtfn(\d+)`)
+	pciAddressRe      = regexp.MustCompile(`^[0-9a-f]{4}:[0-9a-f]{2}:[01][0-9a-f].[0-7]$`)
+	auxiliaryDeviceRe = regexp.MustCompile(`^(\S+\.){2}\d+$`)
 )
 
 type VfObj struct {

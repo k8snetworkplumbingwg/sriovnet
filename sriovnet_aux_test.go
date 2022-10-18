@@ -185,3 +185,56 @@ func TestGetUplinkRepresentorFromAuxNoSuchDevice(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "", pf)
 }
+
+func createPciDevicePaths(pciAddr string, dirs []string) {
+	for _, dir := range dirs {
+		path := filepath.Join(PciSysDir, pciAddr, dir)
+		_ = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
+	}
+}
+
+func TestGetAuxNetDevicesFromPciSuccess(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+	pciAddr := "0000:00:01.0"
+	devs := []string{"foo.bar.0", "foo.bar.1", "foo.baz.0"}
+
+	createPciDevicePaths(pciAddr, devs)
+	// create few regular directories
+	createPciDevicePaths(pciAddr, []string{"infiniband", "net"})
+
+	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, auxDevs, devs)
+}
+
+func TestGetAuxNetDevicesFromPciSuccessNoDevices(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+	pciAddr := "0000:00:01.0"
+
+	createPciDevicePaths(pciAddr, []string{"infiniband", "net"})
+
+	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, auxDevs, []string{})
+}
+
+func TestGetAuxNetDevicesFromPciFailureNoSuchDevice(t *testing.T) {
+	pciAddr := "0000:00:01.0"
+	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
+	assert.Error(t, err)
+	assert.Equal(t, auxDevs, []string(nil))
+}
+
+func TestGetAuxNetDevicesFromPciFailureNotANetworkDevice(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+	pciAddr := "0000:00:01.0"
+
+	createPciDevicePaths(pciAddr, []string{"infiniband"})
+
+	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
+	assert.Error(t, err)
+	assert.Equal(t, auxDevs, []string(nil))
+}
