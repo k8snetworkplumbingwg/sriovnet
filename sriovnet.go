@@ -433,6 +433,24 @@ func GetVfIndexByPciAddress(vfPciAddress string) (int, error) {
 	return -1, fmt.Errorf("vf index for %s not found", vfPciAddress)
 }
 
+// gets the PF index that's associated with a VF PCI address (e.g '0000:03:00.4')
+func GetPfIndexByVfPciAddress(vfPciAddress string) (int, error) {
+	const pciParts = 4
+	pfPciAddress, err := GetPfPciFromVfPci(vfPciAddress)
+	if err != nil {
+		return -1, err
+	}
+	var domain, bus, dev, fn int
+	parsed, err := fmt.Sscanf(pfPciAddress, "%04x:%02x:%02x.%d", &domain, &bus, &dev, &fn)
+	if err != nil {
+		return -1, fmt.Errorf("error trying to parse PF PCI address %s: %v", pfPciAddress, err)
+	}
+	if parsed != pciParts {
+		return -1, fmt.Errorf("failed to parse PF PCI address %s. Unexpected format", pfPciAddress)
+	}
+	return fn, err
+}
+
 // GetPfPciFromVfPci retrieves the parent PF PCI address of the provided VF PCI address in D:B:D.f format
 func GetPfPciFromVfPci(vfPciAddress string) (string, error) {
 	pfPath := filepath.Join(PciSysDir, vfPciAddress, "physfn")
