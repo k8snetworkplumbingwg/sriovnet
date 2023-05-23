@@ -32,7 +32,7 @@ lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run lint tests
 
 .PHONY: test tests
 test: ; $(info  running unit tests...) ## Run unit tests
-	$Q go test ./...
+	$Q go test -race ./...
 
 tests: test lint ; ## Run all tests
 
