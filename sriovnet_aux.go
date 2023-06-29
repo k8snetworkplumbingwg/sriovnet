@@ -28,6 +28,10 @@ import (
 	utilfs "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/filesystem"
 )
 
+const (
+	u32Mask = 0xffffffff
+)
+
 // GetNetDeviceFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
 // returns the correlate netdevice
 func GetNetDevicesFromAux(auxDev string) ([]string, error) {
@@ -103,9 +107,39 @@ func GetAuxNetDevicesFromPci(pciAddr string) ([]string, error) {
 
 	auxDevs := make([]string, 0)
 	for _, file := range files {
+		if !file.IsDir() {
+			// auxiliary devices appear as directory here.
+			continue
+		}
 		if auxiliaryDeviceRe.MatchString(file.Name()) {
 			auxDevs = append(auxDevs, file.Name())
 		}
 	}
 	return auxDevs, nil
+}
+
+// GetAuxSFDevByPciAndSFIndex returns auxiliary SF device name which is associated with the given parent PCI address
+// and SF index. returns error if an error occurred. returns ErrDeviceNotFound error if device is not found.
+func GetAuxSFDevByPciAndSFIndex(pciAddress string, sfIndex uint32) (string, error) {
+	devs, err := GetAuxNetDevicesFromPci(pciAddress)
+	if err != nil {
+		return "", err
+	}
+
+	for _, dev := range devs {
+		// skip non sf devices
+		if !strings.Contains(dev, ".sf.") {
+			continue
+		}
+
+		idx, err := GetSfIndexByAuxDev(dev)
+		if err != nil || idx < 0 {
+			continue
+		}
+
+		if uint32(idx&u32Mask) == sfIndex {
+			return dev, nil
+		}
+	}
+	return "", ErrDeviceNotFound
 }
