@@ -387,7 +387,7 @@ func AllocateVfByMacAddress(handle *PfNetdevHandle, vfMacAddress string) (*VfObj
 		handle.PfNetdevName, vfMacAddress)
 }
 
-func FreeVf(handle *PfNetdevHandle, vf *VfObj) {
+func FreeVf(_ *PfNetdevHandle, vf *VfObj) {
 	vf.Allocated = false
 	log.Printf("Free vf = %v\n", *vf)
 }
