@@ -26,6 +26,33 @@ import (
 	utilfs "github.com/k8snetworkplumbingwg/sriovnet/pkg/utils/filesystem"
 )
 
+type auxDevContext struct {
+	parent string
+	sfNum  string
+	name   string
+}
+
+// setupAuxDevEnv creates (fake) auxiliary devices, returns error if setup failed.
+func setUpAuxDevEnv(t *testing.T, auxDevs []auxDevContext) {
+	var err error
+
+	err = utilfs.Fs.MkdirAll(AuxSysDir, os.FileMode(0755))
+	assert.NoError(t, err)
+
+	for _, dev := range auxDevs {
+		auxDevPathPCI := filepath.Join(PciSysDir, dev.parent, dev.name)
+		auxDevPathAux := filepath.Join(AuxSysDir, dev.name)
+
+		err = utilfs.Fs.MkdirAll(auxDevPathPCI, os.FileMode(0755))
+		assert.NoError(t, err)
+		if dev.sfNum != "" {
+			err = utilfs.Fs.WriteFile(filepath.Join(auxDevPathPCI, "sfnum"), []byte(dev.sfNum), os.FileMode(0655))
+			assert.NoError(t, err)
+		}
+		utilfs.Fs.Symlink(auxDevPathPCI, auxDevPathAux)
+	}
+}
+
 func TestGetNetDevicesFromAuxSuccess(t *testing.T) {
 	teardown := setupFakeFs(t)
 	defer teardown()
@@ -183,10 +210,10 @@ func TestGetUplinkRepresentorFromAuxNoSuchDevice(t *testing.T) {
 	assert.Equal(t, "", pf)
 }
 
-func createPciDevicePaths(pciAddr string, dirs []string) {
+func createPciDevicePaths(t *testing.T, pciAddr string, dirs []string) {
 	for _, dir := range dirs {
 		path := filepath.Join(PciSysDir, pciAddr, dir)
-		_ = utilfs.Fs.MkdirAll(path, os.FileMode(0755))
+		assert.NoError(t, utilfs.Fs.MkdirAll(path, os.FileMode(0755)))
 	}
 }
 
@@ -196,9 +223,9 @@ func TestGetAuxNetDevicesFromPciSuccess(t *testing.T) {
 	pciAddr := "0000:00:01.0"
 	devs := []string{"foo.bar.0", "foo.bar.1", "foo.baz.0"}
 
-	createPciDevicePaths(pciAddr, devs)
+	createPciDevicePaths(t, pciAddr, devs)
 	// create few regular directories
-	createPciDevicePaths(pciAddr, []string{"infiniband", "net"})
+	createPciDevicePaths(t, pciAddr, []string{"infiniband", "net"})
 
 	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
 	assert.NoError(t, err)
@@ -210,7 +237,7 @@ func TestGetAuxNetDevicesFromPciSuccessNoDevices(t *testing.T) {
 	defer teardown()
 	pciAddr := "0000:00:01.0"
 
-	createPciDevicePaths(pciAddr, []string{"infiniband", "net"})
+	createPciDevicePaths(t, pciAddr, []string{"infiniband", "net"})
 
 	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
 	assert.NoError(t, err)
@@ -229,9 +256,71 @@ func TestGetAuxNetDevicesFromPciFailureNotANetworkDevice(t *testing.T) {
 	defer teardown()
 	pciAddr := "0000:00:01.0"
 
-	createPciDevicePaths(pciAddr, []string{"infiniband"})
+	createPciDevicePaths(t, pciAddr, []string{"infiniband"})
 
 	auxDevs, err := GetAuxNetDevicesFromPci(pciAddr)
 	assert.Error(t, err)
 	assert.Equal(t, auxDevs, []string(nil))
+}
+
+func TestGetAuxSFDevByPciAndSFIndex(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	pciAddr := "0000:03:00.0"
+	devs := []auxDevContext{
+		{
+			parent: pciAddr,
+			sfNum:  "",
+			name:   "mlx5_core.eth.0",
+		},
+		{
+			parent: pciAddr,
+			sfNum:  "",
+			name:   "mlx5_core.eth-rep.0",
+		},
+		{
+			parent: pciAddr,
+			sfNum:  "123",
+			name:   "mlx5_core.sf.3",
+		},
+	}
+	setUpAuxDevEnv(t, devs)
+	createPciDevicePaths(t, pciAddr, []string{"infiniband", "net"})
+
+	device, err := GetAuxSFDevByPciAndSFIndex(pciAddr, 123)
+	assert.NoError(t, err)
+	assert.Equal(t, "mlx5_core.sf.3", device)
+}
+
+func TestGetAuxSFDevByPciAndSFIndexSFIndexNotFound(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	pciAddr := "0000:03:00.0"
+	devs := []auxDevContext{
+		{
+			parent: pciAddr,
+			sfNum:  "123",
+			name:   "mlx5_core.sf.3",
+		},
+	}
+	setUpAuxDevEnv(t, devs)
+	createPciDevicePaths(t, pciAddr, []string{"infiniband", "net"})
+
+	device, err := GetAuxSFDevByPciAndSFIndex(pciAddr, 122)
+	assert.Error(t, err)
+	assert.Equal(t, ErrDeviceNotFound, err)
+	assert.Equal(t, "", device)
+}
+
+func TestGetAuxSFDevByPciAndSFIndexPCIAddressNotFound(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	createPciDevicePaths(t, "0000:03:00.0", []string{"infiniband", "net"})
+
+	_, err := GetAuxSFDevByPciAndSFIndex("0000:04:00.0", 4)
+	assert.Error(t, err)
+	assert.NotEqual(t, ErrDeviceNotFound, err)
 }
