@@ -19,6 +19,7 @@ package sriovnet
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -245,4 +246,63 @@ func TestGetPciFromNetDeviceNotPCI(t *testing.T) {
 	_, err := GetPciFromNetDevice(devices[0].Name)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "is not a PCI device")
+}
+
+func TestGetPKeyByIndexFromPci(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	pciAddress := "0000:03:00.2"
+	pKeysFolder := "/sys/bus/pci/devices/0000:03:00.2/infiniband/mlx5_2/ports/1/pkeys/"
+	pKeysToIndex := map[string]int{
+		"0x55":   2,
+		"0x8066": 5,
+	}
+
+	err := utilfs.Fs.MkdirAll(pKeysFolder, os.FileMode(0755))
+	assert.NoError(t, err)
+	for pKey, index := range pKeysToIndex {
+		file, err := utilfs.Fs.Create(filepath.Join(pKeysFolder, strconv.Itoa(index)))
+		assert.NoError(t, err)
+		_, err = file.Write([]byte(pKey))
+		assert.NoError(t, err)
+		err = file.Close()
+		assert.NoError(t, err)
+	}
+
+	for expectedPKey, index := range pKeysToIndex {
+		foundPKey, err := GetPKeyByIndexFromPci(pciAddress, index)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedPKey, foundPKey)
+	}
+}
+
+func TestGetDefaultPKeyFromPci(t *testing.T) {
+	teardown := setupFakeFs(t)
+	defer teardown()
+
+	devices := map[string]struct {
+		path string
+		pkey string
+	}{
+		"0000:03:00.2": {"/sys/bus/pci/devices/0000:03:00.2/infiniband/mlx5_2/ports/1/pkeys/", "0x66"},
+		"0000:03:00.3": {"/sys/bus/pci/devices/0000:03:00.3/infiniband/mlx5_3/ports/1/pkeys/", "0x424"},
+	}
+
+	for _, v := range devices {
+		err := utilfs.Fs.MkdirAll(v.path, os.FileMode(0755))
+		assert.NoError(t, err)
+		file, err := utilfs.Fs.Create(filepath.Join(v.path, "0"))
+		assert.NoError(t, err)
+		_, err = file.Write([]byte(v.pkey))
+		assert.NoError(t, err)
+		err = file.Close()
+		assert.NoError(t, err)
+	}
+
+	for k, v := range devices {
+		pKey, err := GetDefaultPKeyFromPci(k)
+		assert.NoError(t, err)
+		assert.Equal(t, v.pkey, pKey)
+	}
 }
