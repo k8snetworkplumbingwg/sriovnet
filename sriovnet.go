@@ -520,3 +520,28 @@ func GetPciFromNetDevice(name string) (string, error) {
 	}
 	return base, nil
 }
+
+// GetPKeyByIndexFromPci returns the PKey stored under given index for the IB PCI device
+func GetPKeyByIndexFromPci(pciAddress string, index int) (string, error) {
+	pciDir := filepath.Join(PciSysDir, pciAddress, "infiniband")
+	dirEntries, err := utilfs.Fs.ReadDir(pciDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read infiniband directory: %v", err)
+	}
+	if len(dirEntries) == 0 {
+		return "", fmt.Errorf("infiniband directory is empty for device: %s", pciAddress)
+	}
+
+	indexFilePath := filepath.Join(pciDir, dirEntries[0].Name(), "ports", "1", "pkeys", strconv.Itoa(index))
+	pKeyBytes, err := utilfs.Fs.ReadFile(indexFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read PKey file: %v", err)
+	}
+
+	return strings.TrimSpace(string(pKeyBytes)), nil
+}
+
+// GetDefaultPKeyFromPci returns the index0 PKey for the IB PCI device
+func GetDefaultPKeyFromPci(pciAddress string) (string, error) {
+	return GetPKeyByIndexFromPci(pciAddress, 0)
+}
