@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	u32Mask = 0xffffffff
+	u32Mask uint32 = 0xffffffff
 )
 
 // GetNetDeviceFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
@@ -134,7 +134,7 @@ func GetAuxSFDevByPciAndSFIndex(pciAddress string, sfIndex uint32) (string, erro
 			continue
 		}
 
-		if uint32(idx&u32Mask) == sfIndex {
+		if uint32(idx)&u32Mask == sfIndex {
 			return dev, nil
 		}
 	}
