@@ -29,7 +29,7 @@ const (
 	u32Mask uint32 = 0xffffffff
 )
 
-// GetNetDeviceFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
+// GetNetDevicesFromAux gets auxiliary device name (e.g 'mlx5_core.sf.2') and
 // returns the correlate netdevice
 func GetNetDevicesFromAux(auxDev string) ([]string, error) {
 	auxDir := filepath.Join(AuxSysDir, auxDev, "net")

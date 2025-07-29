@@ -49,7 +49,8 @@ func setUpAuxDevEnv(t *testing.T, auxDevs []auxDevContext) {
 			err = utilfs.Fs.WriteFile(filepath.Join(auxDevPathPCI, "sfnum"), []byte(dev.sfNum), os.FileMode(0655))
 			assert.NoError(t, err)
 		}
-		utilfs.Fs.Symlink(auxDevPathPCI, auxDevPathAux)
+		err = utilfs.Fs.Symlink(auxDevPathPCI, auxDevPathAux)
+		assert.NoError(t, err)
 	}
 }
 

@@ -301,9 +301,11 @@ func setDefaultHwAddr(handle *PfNetdevHandle, vf *VfObj) error {
 	var err error
 
 	ethAttr := handle.pfLinkHandle.Attrs()
-	if ethAttr.EncapType == etherEncapType {
+
+	switch ethAttr.EncapType {
+	case etherEncapType:
 		err = SetVfDefaultMacAddress(handle, vf)
-	} else if ethAttr.EncapType == ibEncapType {
+	case ibEncapType:
 		err = SetVfDefaultGUID(handle, vf)
 	}
 	return err
@@ -449,7 +451,7 @@ func GetVfIndexByPciAddress(vfPciAddress string) (int, error) {
 	return -1, fmt.Errorf("vf index for %s not found", vfPciAddress)
 }
 
-// gets the PF index that's associated with a VF PCI address (e.g '0000:03:00.4')
+// GetPfIndexByVfPciAddress gets the PF index that's associated with a VF PCI address (e.g '0000:03:00.4')
 func GetPfIndexByVfPciAddress(vfPciAddress string) (int, error) {
 	const pciParts = 4
 	pfPciAddress, err := GetPfPciFromVfPci(vfPciAddress)
