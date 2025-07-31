@@ -11,7 +11,7 @@ GCOV2LCOV := $(BIN_DIR)/gcov2lcov
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
-GOLANGCI_LINT_VER := v1.53.3
+GOLANGCI_LINT_VER := v2.3.0
 
 Q = $(if $(filter 1,$V),,@)
 
@@ -45,7 +45,7 @@ test-coverage: | test-coverage-tools; $(info  running coverage tests...) @ ## Ru
 
 # Tools
 $(GOLANGCI_LINT): | $(BIN_DIR) ; $(info  building golangci-lint...)
-	$Q GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+	$Q GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
 $(GCOV2LCOV):  | $(BIN_DIR) ; $(info  building gocov2lcov...)
 	$Q GOBIN=$(BIN_DIR) go install github.com/jandelgado/gcov2lcov@v1.0.5

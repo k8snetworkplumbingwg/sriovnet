@@ -125,7 +125,9 @@ func lsFilesWithPrefix(dir, filePrefix string, ignoreDir bool) ([]string, error)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	fileInfos, err := f.Readdir(-1)
 	if err != nil {
 		return nil, err
