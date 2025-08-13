@@ -17,7 +17,6 @@ limitations under the License.
 package sriovnet
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -139,50 +138,30 @@ func GetUplinkRepresentor(pciAddress string) (string, error) {
 
 // GetVfRepresentor returns the VF representor netdev name for a given uplink netdev and vfIndex.
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
-	swIDFile := filepath.Join(NetSysDir, uplink, netdevPhysSwitchID)
-	physSwitchID, err := utilfs.Fs.ReadFile(swIDFile)
-	if err != nil || len(physSwitchID) == 0 {
-		return "", fmt.Errorf("cant get uplink %s switch id", uplink)
+	// if uplink is not switchdev, return error early
+	if !isSwitchdev(uplink) {
+		return "", fmt.Errorf("uplink %s is not a switchdev", uplink)
 	}
 
-	// get uplink pci address and pci function number
-	pfPCIAddress, err := getPCIFromDeviceName(uplink)
-	if err != nil {
-		return "", fmt.Errorf("failed to get pci address for uplink %s: %v", uplink, err)
-	}
-	PCIFuncAddress, err := strconv.Atoi(string((pfPCIAddress[len(pfPCIAddress)-1])))
-	if err != nil {
-		return "", fmt.Errorf("failed to get pci function number for uplink %s, pfPCIAddress %s: %w",
-			uplink, pfPCIAddress, err)
-	}
-
-	pfSubsystemPath := filepath.Join(NetSysDir, uplink, "subsystem")
-	devices, err := utilfs.Fs.ReadDir(pfSubsystemPath)
+	// representors of a specific uplinkare expected to be linked with the same device as the uplink
+	pfLinkPath := filepath.Join(NetSysDir, uplink, "device", "net")
+	devices, err := utilfs.Fs.ReadDir(pfLinkPath)
 	if err != nil {
 		return "", err
 	}
 	for _, device := range devices {
-		devicePath := filepath.Join(NetSysDir, device.Name())
-		deviceSwIDFile := filepath.Join(devicePath, netdevPhysSwitchID)
-		deviceSwID, err := utilfs.Fs.ReadFile(deviceSwIDFile)
-		if err != nil || !bytes.Equal(deviceSwID, physSwitchID) {
-			continue
-		}
-
 		physPortNameStr, err := getNetDevPhysPortName(device.Name())
 		if err != nil {
 			continue
 		}
 
-		pfRepIndex, vfRepIndex, err := parseIndexFromPhysPortName(physPortNameStr, vfPortRepRegex)
+		_, vfRepIndex, err := parseIndexFromPhysPortName(physPortNameStr, vfPortRepRegex)
 		if err != nil {
 			continue
 		}
 
-		// check pfRepIndex matches the uplink PF function number (e.g. 0000:03:00.0 -> 0) and
-		// vfRepIndex matches the vfIndex
-		if pfRepIndex == PCIFuncAddress && vfRepIndex == vfIndex {
-			// At this point we're confident we have a representor.
+		// check vfRepIndex matches the vfIndex
+		if vfRepIndex == vfIndex {
 			return device.Name(), nil
 		}
 	}
