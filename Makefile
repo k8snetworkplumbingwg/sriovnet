@@ -8,6 +8,7 @@ TESTPKGS := $(shell go list -f '{{ if or .TestGoFiles .XTestGoFiles }}{{ .Import
 # Go tools
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 GCOV2LCOV := $(BIN_DIR)/gcov2lcov
+MOCKERY := $(BIN_DIR)/mockery
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
@@ -43,12 +44,19 @@ test-coverage: | test-coverage-tools; $(info  running coverage tests...) @ ## Ru
 	$Q go test -covermode=$(COVERAGE_MODE) -coverprofile=sriovnet.cover ./...
 	$Q $(GCOV2LCOV) -infile sriovnet.cover -outfile sriovnet.lcov
 
+.PHONY: generate-mocks
+generate-mocks: | $(MOCKERY) ; $(info generating mocks...) @ ## Generate mocks
+	$Q $(MOCKERY) --log-level=debug
+
 # Tools
 $(GOLANGCI_LINT): | $(BIN_DIR) ; $(info  building golangci-lint...)
 	$Q GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
 $(GCOV2LCOV):  | $(BIN_DIR) ; $(info  building gocov2lcov...)
 	$Q GOBIN=$(BIN_DIR) go install github.com/jandelgado/gcov2lcov@v1.0.5
+
+$(MOCKERY): | $(BIN_DIR) ; $(info  building mockery...)
+	$Q GOBIN=$(BIN_DIR) go install github.com/vektra/mockery/v3@v3.5.3
 
 # Misc
 .PHONY: clean
