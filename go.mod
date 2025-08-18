@@ -18,3 +18,5 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/vishvananda/netlink => github.com/adrianchiris/netlink v1.0.1-0.20250818103237-398598b7042c
