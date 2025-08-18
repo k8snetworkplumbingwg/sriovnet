@@ -358,6 +358,37 @@ func GetSfRepresentorDPU(pfID, sfIndex string) (string, error) {
 	return "", fmt.Errorf("sf representor for pfID: %s, sfIndex: %s not found", pfID, sfIndex)
 }
 
+// GetPfRepresentorDPU returns PF representor on DPU for a host PF identified by its ID.
+func GetPfRepresentorDPU(pfID string) (string, error) {
+	// pfID should be 0 or 1
+	if pfID != "0" && pfID != "1" {
+		return "", fmt.Errorf("unexpected pfID(%s). It should be 0 or 1", pfID)
+	}
+
+	// match port name with external controller index
+	// NOTE: no support for Multi-Chassis DPUs
+	expectedPhysPortName := fmt.Sprintf("c1pf%s", pfID)
+	netdev, err := findNetdevWithPortNameCriteria(func(portName string) bool {
+		return portName == expectedPhysPortName
+	})
+
+	if err == nil {
+		return netdev, nil
+	}
+
+	// match port name without controller index (legacy)
+	expectedPhysPortName = fmt.Sprintf("pf%s", pfID)
+	netdev, err = findNetdevWithPortNameCriteria(func(portName string) bool {
+		return portName == expectedPhysPortName
+	})
+
+	if err == nil {
+		return netdev, nil
+	}
+
+	return "", fmt.Errorf("pf representor for pfID: %s not found", pfID)
+}
+
 // GetRepresentorPortFlavour returns the representor port flavour
 // Note: this method does not support old representor names used by old kernels
 // e.g <vf_num> and will return PORT_FLAVOUR_UNKNOWN for such cases.

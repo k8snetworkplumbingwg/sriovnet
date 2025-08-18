@@ -376,6 +376,86 @@ func TestGetVfRepresentorDPU(t *testing.T) {
 	}
 }
 
+func TestGetPfRepresentorDPU(t *testing.T) {
+	tcases := []struct {
+		name          string
+		pfReps        []*repContext
+		pfID          string
+		expectedPfRep string
+		shouldFail    bool
+	}{
+		{
+			name: "PF representor with controller index",
+			pfReps: []*repContext{
+				{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "p1", PhysPortName: "p1", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth0", PhysPortName: "c1pf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "c1pf1", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			pfID:          "0",
+			expectedPfRep: "eth0",
+			shouldFail:    false,
+		},
+		{
+			name: "PF representor with controller index - pf1",
+			pfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "c1pf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "c1pf1", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			pfID:          "1",
+			expectedPfRep: "eth1",
+			shouldFail:    false,
+		},
+		{
+			name: "PF representor without controller index (legacy)",
+			pfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "pf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "pf1", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			pfID:          "1",
+			expectedPfRep: "eth1",
+			shouldFail:    false,
+		},
+		{
+			name: "PF representor not found",
+			pfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "c1pf0", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			pfID:          "1",
+			expectedPfRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:          "invalid pfID",
+			pfReps:        []*repContext{},
+			pfID:          "3",
+			expectedPfRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:          "invalid pfID - non-numeric",
+			pfReps:        []*repContext{},
+			pfID:          "bla",
+			expectedPfRep: "",
+			shouldFail:    true,
+		},
+	}
+
+	for _, tcase := range tcases {
+		t.Run(tcase.name, func(t *testing.T) {
+			teardown := setupRepresentorEnv(t, "", tcase.pfReps)
+			defer teardown()
+			pfRep, err := GetPfRepresentorDPU(tcase.pfID)
+			if tcase.shouldFail {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tcase.expectedPfRep, pfRep)
+			}
+		})
+	}
+}
+
 func setupSfRepresentorEnv(t *testing.T, sfReps []*repContext) func() {
 	var err error
 	teardown := setupFakeFs(t)
