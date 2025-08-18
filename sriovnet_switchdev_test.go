@@ -156,6 +156,164 @@ func setupDPUConfigFileForPort(t *testing.T, uplink, portName, fileContent strin
 	assert.NoError(t, err)
 }
 
+func setupRepresentorEnvForGetVfRepresentor(t *testing.T, uplink *repContext, vfReps []*repContext) func() {
+	var err error
+	teardown := setupFakeFs(t)
+
+	defer func() {
+		if err != nil {
+			teardown()
+			t.Errorf("setupRepresentorEnvForGetVfRepresentor, got %v", err)
+		}
+	}()
+
+	// Create the uplink device/net directory structure
+	pfNetPath := filepath.Join(NetSysDir, uplink.Name, "device", "net")
+	err = utilfs.Fs.MkdirAll(pfNetPath, os.FileMode(0755))
+	if err != nil {
+		teardown()
+		t.Errorf("setupRepresentorEnvForGetVfRepresentor, got %v", err)
+	}
+
+	for _, rep := range vfReps {
+		// Create representor directory under the uplink's device/net path
+		repPath := filepath.Join(pfNetPath, rep.Name)
+		repLink := filepath.Join(NetSysDir, rep.Name)
+
+		err = utilfs.Fs.MkdirAll(repPath, os.FileMode(0755))
+		if err != nil {
+			teardown()
+			t.Errorf("setupRepresentorEnvForGetVfRepresentor, got %v", err)
+		}
+
+		// Create symlink from /sys/class/net/<rep_name> to the rep path
+		_ = utilfs.Fs.Symlink(repPath, repLink)
+
+		if err = setUpRepPhysFiles(rep); err != nil {
+			teardown()
+			t.Errorf("setupRepresentorEnvForGetVfRepresentor, got %v", err)
+		}
+	}
+
+	// create phys_port_name and phys_switch_id files for the uplink
+	if err = setUpRepPhysFiles(uplink); err != nil {
+		teardown()
+		t.Errorf("setupRepresentorEnvForGetVfRepresentor, got %v", err)
+	}
+
+	return teardown
+}
+
+func TestGetVfRepresentor(t *testing.T) {
+	tcases := []struct {
+		name          string
+		uplink        *repContext
+		vfReps        []*repContext
+		vfIndex       int
+		expectedVFRep string
+		shouldFail    bool
+	}{
+		{
+			name:   "VF representor found",
+			uplink: &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "pf0vf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "pf0vf1", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth2", PhysPortName: "pf0vf2", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			vfIndex:       2,
+			expectedVFRep: "eth2",
+			shouldFail:    false,
+		},
+		{
+			name:   "VF representor not found - index doesn't exist",
+			uplink: &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "pf0vf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "pf0vf1", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth2", PhysPortName: "pf0vf2", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			vfIndex:       5,
+			expectedVFRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:          "VF representor not found - no representors",
+			uplink:        &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps:        []*repContext{},
+			vfIndex:       0,
+			expectedVFRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:   "VF representor not found - invalid phys_port_name",
+			uplink: &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "invalid", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth1", PhysPortName: "pf0sf1", PhysSwitchID: "c2cfc60003a1420c"}, // SF instead of VF
+			},
+			vfIndex:       0,
+			expectedVFRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:   "VF representor not found - missing phys_port_name",
+			uplink: &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "", PhysSwitchID: "c2cfc60003a1420c"}, // No phys_port_name
+				{Name: "eth1", PhysPortName: "pf0vf1", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			vfIndex:       0,
+			expectedVFRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:          "uplink is not switchdev",
+			uplink:        &repContext{Name: "eth0", PhysPortName: "", PhysSwitchID: ""},
+			vfReps:        []*repContext{},
+			vfIndex:       0,
+			expectedVFRep: "",
+			shouldFail:    true,
+		},
+		{
+			name:   "VF representor found with mixed representors",
+			uplink: &repContext{Name: "p0", PhysPortName: "p0", PhysSwitchID: "c2cfc60003a1420c"},
+			vfReps: []*repContext{
+				{Name: "eth0", PhysPortName: "invalid", PhysSwitchID: "c2cfc60003a1420c"}, // Invalid
+				{Name: "eth1", PhysPortName: "pf0vf0", PhysSwitchID: "c2cfc60003a1420c"},
+				{Name: "eth2", PhysPortName: "pf0sf1", PhysSwitchID: "c2cfc60003a1420c"}, // SF rep
+				{Name: "eth3", PhysPortName: "pf0vf2", PhysSwitchID: "c2cfc60003a1420c"},
+			},
+			vfIndex:       2,
+			expectedVFRep: "eth3",
+			shouldFail:    false,
+		},
+	}
+
+	for _, tcase := range tcases {
+		t.Run(tcase.name, func(t *testing.T) {
+			teardown := setupRepresentorEnvForGetVfRepresentor(t, tcase.uplink, tcase.vfReps)
+			defer teardown()
+			vfRep, err := GetVfRepresentor(tcase.uplink.Name, tcase.vfIndex)
+			if tcase.shouldFail {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tcase.expectedVFRep, vfRep)
+			}
+		})
+	}
+
+	// Test edge case: uplink directory doesn't exist (filesystem error)
+	t.Run("uplink directory doesn't exist", func(t *testing.T) {
+		teardown := setupFakeFs(t)
+		defer teardown()
+
+		_, err := GetVfRepresentor("nonexistent_uplink", 0)
+		assert.Error(t, err)
+	})
+}
+
 func TestGetUplinkRepresentorWithPhysPortName(t *testing.T) {
 	tcases := []struct {
 		name                 string
