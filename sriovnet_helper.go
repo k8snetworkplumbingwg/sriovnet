@@ -117,15 +117,6 @@ func vfPCIDevNameFromVfIndex(pfNetdevName string, vfIndex int) (string, error) {
 	return pciAddress, err
 }
 
-func getPCIFromDeviceName(netdevName string) (string, error) {
-	symbolicLink := filepath.Join(NetSysDir, netdevName, pcidevPrefix)
-	pciAddress, err := readPCIsymbolicLink(symbolicLink)
-	if err != nil {
-		err = fmt.Errorf("%v for netdevice %s", err, netdevName)
-	}
-	return pciAddress, err
-}
-
 func GetVfPciDevList(pfNetdevName string) ([]string, error) {
 	var i int
 	devDirName := netDevDeviceDir(pfNetdevName)
