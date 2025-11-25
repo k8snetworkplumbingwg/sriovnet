@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
-	github.com/vishvananda/netlink v1.3.1
+	github.com/vishvananda/netlink v1.3.2-0.20251101063711-6e61cd407d1d
 )
 
 require (
