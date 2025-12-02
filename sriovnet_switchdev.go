@@ -136,12 +136,77 @@ func GetUplinkRepresentor(pciAddress string) (string, error) {
 	return "", fmt.Errorf("uplink for %s not found", pciAddress)
 }
 
+// getRepresentorDevlink returns the representor netdev name for a given device, portflavor, controller number and index.
+func getRepresentorDevlink(deviceName string, flavor PortFlavour, controllerNumber uint32, index uint32) (string, error) {
+	// check for supported flavor
+	if flavor != PORT_FLAVOUR_PCI_VF && flavor != PORT_FLAVOUR_PCI_SF {
+		return "", fmt.Errorf("unsupported flavor %d", flavor)
+	}
+
+	ports, err := netlinkops.GetNetlinkOps().DevLinkGetDevicePortList("pci", deviceName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get devlink ports for pci device %s: %w", deviceName, err)
+	}
+
+	for _, port := range ports {
+		// skip ports that are not of the given flavor
+		if port.PortFlavour != uint16(flavor) {
+			continue
+		}
+
+		if port.ControllerNumber == nil || *port.ControllerNumber != controllerNumber {
+			continue
+		}
+
+		// get devlink port sf/vf number
+		var dpIndex uint32
+		switch flavor {
+		case PORT_FLAVOUR_PCI_VF:
+			if port.VfNumber == nil {
+				return "", fmt.Errorf("unexpected result from netlink. devlink port of type vf has not vf number. pci/%s/%d", deviceName, port.PortIndex)
+			}
+			dpIndex = uint32(*port.VfNumber)
+		case PORT_FLAVOUR_PCI_SF:
+			if port.SfNumber == nil {
+				return "", fmt.Errorf("unexpected result from netlink. devlink port of type sf has not sf number. pci/%s/%d", deviceName, port.PortIndex)
+			}
+			dpIndex = *port.SfNumber
+		}
+
+		if dpIndex != index {
+			continue
+		}
+
+		return port.NetdeviceName, nil
+	}
+
+	return "", fmt.Errorf("failed to find representor for: device %s, flavor %d, controller %d, index %d", deviceName, flavor, controllerNumber, index)
+}
+
 // GetVfRepresentor returns the VF representor netdev name for a given uplink netdev and vfIndex.
 func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 	// if uplink is not switchdev, return error early
 	if !isSwitchdev(uplink) {
 		return "", fmt.Errorf("uplink %s is not a switchdev", uplink)
 	}
+
+	if vfIndex < 0 {
+		return "", fmt.Errorf("vfIndex %d is negative", vfIndex)
+	}
+
+	// get uplink pci device
+	uplinkPCI, err := getPCIFromDeviceName(uplink)
+	if err != nil {
+		return "", fmt.Errorf("failed to get pci address for uplink %s: %v", uplink, err)
+	}
+
+	// try to get representor from devlink
+	representor, err := getRepresentorDevlink(uplinkPCI, PORT_FLAVOUR_PCI_VF, 0, uint32(vfIndex))
+	if err == nil {
+		return representor, nil
+	}
+
+	// try to get representor from phys_port_name
 
 	// representors of a specific uplinkare expected to be linked with the same device as the uplink
 	pfLinkPath := filepath.Join(NetSysDir, uplink, "device", "net")
@@ -165,11 +230,29 @@ func GetVfRepresentor(uplink string, vfIndex int) (string, error) {
 			return device.Name(), nil
 		}
 	}
-	return "", fmt.Errorf("failed to find VF representor for uplink %s", uplink)
+	return "", fmt.Errorf("failed to find VF representor for uplink %s, vfIndex %d", uplink, vfIndex)
 }
 
 // GetSfRepresentor returns the SF representor netdev name for a given uplink netdev and sfIndex.
 func GetSfRepresentor(uplink string, sfNum int) (string, error) {
+	// if uplink is not switchdev, return error early
+	if !isSwitchdev(uplink) {
+		return "", fmt.Errorf("uplink %s is not a switchdev", uplink)
+	}
+
+	// get uplink pci device
+	uplinkPCI, err := getPCIFromDeviceName(uplink)
+	if err != nil {
+		return "", fmt.Errorf("failed to get pci address for uplink %s: %v", uplink, err)
+	}
+
+	// try to get representor from devlink
+	representor, err := getRepresentorDevlink(uplinkPCI, PORT_FLAVOUR_PCI_SF, 0, uint32(sfNum))
+	if err == nil {
+		return representor, nil
+	}
+
+	// try to get representor from phys_port_name
 	pfNetPath := filepath.Join(NetSysDir, uplink, "device", "net")
 	devices, err := utilfs.Fs.ReadDir(pfNetPath)
 	if err != nil {
@@ -189,7 +272,7 @@ func GetSfRepresentor(uplink string, sfNum int) (string, error) {
 			return device.Name(), nil
 		}
 	}
-	return "", fmt.Errorf("failed to find SF representor for uplink %s", uplink)
+	return "", fmt.Errorf("failed to find SF representor for uplink %s, sfNum %d", uplink, sfNum)
 }
 
 func getNetDevPhysPortName(netDev string) (string, error) {
